@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use base qw(Exporter);
 
+use IO::Socket::INET;
 use Module::Build;
 
 my $build;
@@ -59,8 +60,15 @@ sub start {
                      "http://localhost:$SELENIUM_PORT/",
                      "http://localhost:$HTTPD_PORT/" )
       if $build->notes( 'poe_server' );
-    sleep 6; # needs checking for open port...
+    for ( 1 .. 10 ) {
+      if(    IO::Socket::INET->new( "localhost:$HTTPD_PORT" )
+          && IO::Socket::INET->new( "localhost:$SELENIUM_PORT" ) ) {
+          last;
+      };
+      sleep 1;
+    }
     # Python server is *slow*
+    $selenium->set_timeout( '20' ) if $build->notes( 'python_server' );
     $test->set_timeout( '20' ) if $build->notes( 'python_server' );
     $SIG{INT} = sub { stop() };
 }

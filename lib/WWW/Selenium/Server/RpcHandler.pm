@@ -13,6 +13,11 @@ sub Queues { 'WWW::Selenium::Server::Queue' }
 
 my $coder = Frontier::RPC2->new;
 
+sub _log {
+    return unless $ENV{SELENIUM_SERVER_LOG};
+    print STDERR @_, "\n";
+}
+
 sub rpc2 {
     my( $request, $response ) = @_;
     my $call = $coder->decode( $request->content );
@@ -22,6 +27,7 @@ sub rpc2 {
     my $cb = sub {
         my $elt = shift;
 
+	_log( 'rpc: gotResult: ', $elt );
         $response->content( $coder->encode_response( $elt ) );
         $response->continue if $response->code == RC_WAIT;
         $response->code( RC_OK );
@@ -30,6 +36,7 @@ sub rpc2 {
     my $command = $call->{method_name};
     my @args    = @{$call->{value}};
 
+    _log( 'rpc: addCommand: ', $command );
     my $string = sprintf '| %s | %s | %s |', $command,
                      ( defined $args[0] ? $args[0] : '' ),
                      ( defined $args[1] ? $args[1] : '' );

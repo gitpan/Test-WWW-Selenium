@@ -1,4 +1,11 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+0.02  Tue Dec 27 21:09:47 CET 2005
+    - Fix handling of commands taking locators as first argument in
+      Test::WWW::Selenium.
+    - Improved the documentation.
+    - Added mozilla-firefox and mozffremote to the Unix browser list
+      (thanks to Mark Stosberg).
+
 0.01  Tue Nov  1 10:25:24 CET 2005
     - First public release.

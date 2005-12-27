@@ -5,7 +5,8 @@ use warnings;
 use base qw(WWW::Selenium::Launcher::Pick);
 
 # order is more or less casual (except for Netscape at the end...)
-my @browsers = qw(firefox konqueror mozilla opera netscape);
+my @browsers = qw(firefox mozilla-firefox mozffremote
+		  konqueror mozilla opera netscape);
 
 sub new {
     my( $class ) = @_;
