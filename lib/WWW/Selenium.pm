@@ -3,7 +3,7 @@ package WWW::Selenium;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -26,6 +26,13 @@ WWW::Selenium - Perl driver for the Selenium testing framework
     $selenium->stop;
 
 =head1 DESCRIPTION
+
+Selenium (http://selenium.openqa.org/) is a test tool for web
+applications. Selenium tests run directly in a browser, just as real
+users do. And they run in Internet Explorer, Mozilla and Firefox on
+Windows, Linux, and Macintosh. Selenium in not meant for unit testing
+but is invluable for functional/acceptance testing of applications
+relying on JavaScript.
 
 This module uses Selenium in driven mode to test web applications. The
 Selenium method calls are automatically generated; this means the full

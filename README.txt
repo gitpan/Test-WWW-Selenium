@@ -1,7 +1,14 @@
-WWW::Selenium is a per driver for the Selenium Web testing
+WWW::Selenium is a Perl driver for the Selenium Web testing
 framework.
 
-Copyright (c) 2005 Mattia Barbon.
+Selenium (http://selenium.openqa.org/) is a test tool for web
+applications. Selenium tests run directly in a browser, just as real
+users do. And they run in Internet Explorer, Mozilla and Firefox on
+Windows, Linux, and Macintosh. Selenium in not meant for unit testing
+but is invluable for functional/acceptance testing of applications
+relying on JavaScript.
+
+Copyright (c) 2005, 2006 Mattia Barbon <mbarbon@cpan.org>.
 This package is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 

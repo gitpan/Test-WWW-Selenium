@@ -1,5 +1,8 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+0.03  Tue Jan 10 20:14:19 CET 2006
+    - Added a short description of Selenium.
+
 0.02  Tue Dec 27 21:09:47 CET 2005
     - Fix handling of commands taking locators as first argument in
       Test::WWW::Selenium.

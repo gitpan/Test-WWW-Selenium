@@ -1,8 +1,50 @@
---- #YAML:1.0
+---
 name: Test-WWW-Selenium
-version: 0.02
+version: 0.03
 author:
   - Mattia Barbon <mbarbon@cpan.org>
 abstract: Tesing applications using WWW::Selenium
 license: perl
-generated_by: Module::Build version 0.2611, without YAML.pm
+requires:
+  Alien::Selenium: 0
+  Frontier::Client: 0
+  Frontier::RPC2: 0
+  LWP: 5.8
+  POE: 0.29
+  POE::Component::Client::UserAgent: 0
+  POE::Component::Server::HTTP: 0
+  Test::LongString: 0
+build_requires:
+  Test::More: 0.47
+provides:
+  Test::WWW::Selenium:
+    file: lib/Test/WWW/Selenium.pm
+    version: 0.03
+  WWW::Selenium:
+    file: lib/WWW/Selenium.pm
+    version: 0.03
+  WWW::Selenium::Launcher::Base:
+    file: lib/WWW/Selenium/Launcher/Base.pm
+  WWW::Selenium::Launcher::Default:
+    file: lib/WWW/Selenium/Launcher/Default.pm
+  WWW::Selenium::Launcher::MacDefault:
+    file: lib/WWW/Selenium/Launcher/MacDefault.pm
+  WWW::Selenium::Launcher::Pick:
+    file: lib/WWW/Selenium/Launcher/Pick.pm
+  WWW::Selenium::Launcher::UnixDefault:
+    file: lib/WWW/Selenium/Launcher/UnixDefault.pm
+  WWW::Selenium::Launcher::WindowsDefault:
+    file: lib/WWW/Selenium/Launcher/WindowsDefault.pm
+  WWW::Selenium::RpcCommandProcessor:
+    file: lib/WWW/Selenium/RpcCommandProcessor.pm
+  WWW::Selenium::Server::DriverHandler:
+    file: lib/WWW/Selenium/Server/DriverHandler.pm
+  WWW::Selenium::Server::Queue:
+    file: lib/WWW/Selenium/Server/Queue.pm
+  WWW::Selenium::Server::ReverseProxyHandler:
+    file: lib/WWW/Selenium/Server/ReverseProxyHandler.pm
+  WWW::Selenium::Server::RpcHandler:
+    file: lib/WWW/Selenium/Server/RpcHandler.pm
+  WWW::Selenium::Server::StaticHandler:
+    file: lib/WWW/Selenium/Server/StaticHandler.pm
+generated_by: Module::Build version 0.2611
