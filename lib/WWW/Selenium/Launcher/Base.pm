@@ -15,14 +15,20 @@ sub new {
 sub launch {
     my( $self, $url ) = @_;
 
-    $self->exec( $self->{command} . ' ' . $url );
+    my $cmd = $self->{command};
+    if (ref($cmd) eq 'CODE') {
+        $cmd->('launch', $url);
+    }
+    else {
+        $self->exec("$cmd $url");
+    }
 }
 
 sub exec {
     my( $self, $command ) = @_;
     my( $rd, $wr, $err );
 
-    $self->{pid} = open3( $wr, $rd, $err, $command );
+    $self->{pid} = open3( $wr, $rd, $err, $command ) ;
 
     close $rd;
     close $wr;
@@ -32,7 +38,12 @@ sub exec {
 sub close {
     my( $self ) = @_;
 
-    kill 3, $self->{pid} if $self->{pid} >= 0;
+    if (ref($self->{command}) eq 'CODE') {
+        $self->{command}->('close');
+    }
+    else {
+        kill 3, $self->{pid} if $self->{pid} >= 0;
+    }
 }
 
 1;

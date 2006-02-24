@@ -8,6 +8,10 @@ use File::Spec;
 sub new {
     my( $class, @commands ) = @_;
 
+    if( !@commands && $ENV{SELENIUM_BROWSERS} ) {
+        @commands = split ' ', $ENV{SELENIUM_BROWSERS};
+    }
+
     foreach my $command ( @commands ) {
         foreach my $dir ( File::Spec->path ) {
             my $try = File::Spec->catfile( $dir, $command );

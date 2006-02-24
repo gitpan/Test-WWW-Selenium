@@ -3,7 +3,7 @@ package Test::WWW::Selenium;
 use strict;
 use base qw(WWW::Selenium);
 
-our $VERSION = '0.03';
+our $VERSION = '0.05';
 
 =head1 NAME
 
@@ -13,24 +13,24 @@ Test::WWW::Selenium - Tesing applications using WWW::Selenium
 
     ues Test::More tests => 4;
     use Test::WWW::Selenium;
-    use WWW::Selenium::Launcher::Default;
-    use WWW::Selenium::RpcCommandProcessor;
 
-    my $selenium = Test::WWW::Selenium->new
-        ( WWW::Selenium::RpcCommandProcessor->new
-            ( 'http://localhost:8080/selenium-driver' ),
-          WWW::Selenium::Launcher::Default->new );
+    # Launch a browser 
+    my $selenium_url = 'http://localhost/selenium';
+    my $browser = WWW::Selenium::Launcher::Default->new;
+    $browser->launch("$selenium_url/SeleneseRunner.html");
+    END { $browser->close if $browser }
 
+    my $selenium = Test::WWW::Selenium->new;
     $selenium->open_ok( 'http://localhost:8080/index.html' );
     $selenium->title_is( 'Some title' );
     $selenium->click_and_wait_ok( 'link_id' );
     $selenium->title_like( qr/title/i );
-    $selenium->stop;
+    $selenium->finished;
 
 =head1 REQUIREMENTS
 
-The tests need to be located on the same machine as the browser that will
-be driving the testing session.
+The tests need to be run on the same machine as the web server.  The web 
+server must have Selenium installed, and the Selenium driver installed.
 
 =head1 DESCRIPTION
 
@@ -93,6 +93,7 @@ sub AUTOLOAD {
 	if( $no_locator{$1} ) {
 	  $sub = sub {
               my( $self, $str, $desc ) = @_;
+              diag "Test::WWW::Selenium running $name (@_[1..$#_])";
 
 	      local $Test::Builder::Level = $Test::Builder::Level + 1;
 	      no strict 'refs';
@@ -101,6 +102,7 @@ sub AUTOLOAD {
         } else {
 	  $sub = sub {
               my( $self, $locator, $str, $desc ) = @_;
+              diag "Test::WWW::Selenium running $name (@_[1..$#_])";
 
 	      local $Test::Builder::Level = $Test::Builder::Level + 1;
 	      no strict 'refs';
@@ -112,6 +114,7 @@ sub AUTOLOAD {
 
         $sub = sub {
             my( $self, $arg1, $arg2, $desc ) = @_;
+            diag "Test::WWW::Selenium running $name (@_[1..$#_])";
 
             local $Test::Builder::Level = $Test::Builder::Level + 1;
             return ok( $self->$cmd( $arg1, $arg2 ), $desc );
@@ -132,13 +135,16 @@ sub AUTOLOAD {
 
 __END__
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Mattia Barbon <mbarbon@cpan.org>
+Maintained by Luke Closs <lukec@cpan.org>
+
+Originally by Mattia Barbon <mbarbon@cpan.org>
 
 =head1 LICENSE
 
-Copyright (c) 2005 Mattia Barbon <mbarbon@cpan.org>
+Copyright (c) 2006 Luke Closs <lukec@cpan.org>
+Copyright (c) 2005,2006 Mattia Barbon <mbarbon@cpan.org>
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself

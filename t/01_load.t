@@ -1,28 +1,21 @@
 #!/usr/bin/perl -w
-
 use strict;
-use Test::More tests => 14;
-use Module::Build;
+use Test::More tests => 15;
+use lib 'lib';
 
-my $build = Module::Build->current;
-
-use_ok( 'WWW::Selenium::Launcher::Base' );
-use_ok( 'WWW::Selenium::Launcher::Pick' );
-use_ok( 'WWW::Selenium::Launcher::WindowsDefault' );
-use_ok( 'WWW::Selenium::Launcher::UnixDefault' );
-use_ok( 'WWW::Selenium::Launcher::MacDefault' );
-use_ok( 'WWW::Selenium::Launcher::Default' );
-use_ok( 'WWW::Selenium::RpcCommandProcessor' );
-use_ok( 'WWW::Selenium' );
-use_ok( 'Test::WWW::Selenium' );
-
-SKIP: {
-    skip 'RPC Server not wanted', 5
-      unless $build->notes( 'server' );
-
-    use_ok( 'WWW::Selenium::Server::Queue' );
-    use_ok( 'WWW::Selenium::Server::DriverHandler' );
-    use_ok( 'WWW::Selenium::Server::ReverseProxyHandler' );
-    use_ok( 'WWW::Selenium::Server::RpcHandler' );
-    use_ok( 'WWW::Selenium::Server::StaticHandler' );
-}
+use_ok 'WWW::Selenium::Launcher::Base';
+#use_ok 'WWW::Selenium::Launcher::NoLaunch';
+use_ok 'WWW::Selenium::Launcher::Pick';
+use_ok 'WWW::Selenium::Launcher::WindowsDefault';
+use_ok 'WWW::Selenium::Launcher::UnixDefault';
+use_ok 'WWW::Selenium::Launcher::MacDefault';
+use_ok 'WWW::Selenium::Launcher::Default';
+use_ok 'WWW::Selenium::Launcher::Safari';
+use_ok 'WWW::Selenium';
+use_ok 'WWW::Selenium::Command';
+use_ok 'WWW::Selenium::CommandBridge';
+use_ok 'WWW::Selenium::CommandBridge::Backend';
+use_ok 'WWW::Selenium::CommandBridge::Backend::File';
+use_ok 'WWW::Selenium::CommandBridge::Backend::InMemory';
+use_ok 'WWW::Selenium::Driver';
+use_ok 'Test::WWW::Selenium';
