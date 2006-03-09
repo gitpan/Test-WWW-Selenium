@@ -1,2 +1,3 @@
 Add architecture diagrams 
 Add a "remote" command bridge backend to enable multi-machine testing
+Auto-launch a browser

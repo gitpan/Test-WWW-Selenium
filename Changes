@@ -1,6 +1,11 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
-0.05
+0.06
+    - Added descriptive png images to doc/ 
+    - Added support for CGI driver to store/retrive commands and results
+    - Added script to convert a wiki syntax file into a perl script
+
+0.05  Fri Feb 24 00:47:02 PST 2006
     - ownership changed to Luke Closs
     - Changed to use Module::Install instead of Module::Build
     - removed POE based server
@@ -11,7 +16,7 @@ Revision history for Perl extension Test::WWW::Selenium.
     - Added example CGI driver and example test script
     - Use Mac::Applescript to control Safari, if available
 
-0.04 (Mattia Barbon)
+0.04 (Mattia Barbon) (Not released)
     - Added a REST interface to Selenium Server (as an exercise).
     - When running the regression tests, the SELENIUM_LAUNCHER
       and SELENIUM_PROCESSOR enviornment variables can be used

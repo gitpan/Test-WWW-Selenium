@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use WWW::Selenium::CommandBridge;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 NAME
 

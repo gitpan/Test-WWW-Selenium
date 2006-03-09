@@ -1,4 +1,4 @@
-#line 1 "inc/Module/AutoInstall.pm - /usr/local/ActivePerl-5.8/lib/site_perl/5.8.7/Module/AutoInstall.pm"
+#line 1 "inc/Module/AutoInstall.pm - /opt/lang/perl/pmperl/lib/site_perl/5.6.1/Module/AutoInstall.pm"
 package Module::AutoInstall;
 $Module::AutoInstall::VERSION = '1.01';
 

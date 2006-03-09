@@ -38,8 +38,12 @@ the Selenium Server CGI driver.  An example driver is included in this
 package (scripts/driver.cgi).  Move this file to the same place you installed 
 Selenium, so that it will be visible as /selenium/driver.
 
-At this point, you're ready to go!  Look at the included script/passenger 
+At this point, you're ready to go!  Look at the included script/passenger
 script to see an example of how your test script should look.
+
+If you have existing selenium wiki table files, use
+script/convert_wiki_to_perl.pl to create a perl test file containing the 
+tests.
 
 
 WWW::Selenium Architecture

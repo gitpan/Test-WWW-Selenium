@@ -29,6 +29,43 @@ Simple_test: {
     is $mock_cb->{result}, 'OK';
 }
 
+Remote_CommandBridge: {
+    my $sel = WWW::Selenium::Driver->new( backend => 'InMemory' );
+    isa_ok $sel, 'WWW::Selenium::Driver';
+    my $mock_cb = WWW::Selenium::CommandBridge::Backend::InMemory->new;
+    $mock_cb->result('OK');
+    like $sel->drive(MockCGI->new( cmd => 'verifyText', 
+                                   opt1 => 'foo', opt2 => 'bar' )),
+         qr#Result: OK#;
+    is $mock_cb->{cmd}{cmd}, 'verifyText';
+    is $mock_cb->{cmd}{opt1}, 'foo';
+    is $mock_cb->{cmd}{opt2}, 'bar';
+}
+
+Remote_CommandBridge_two_arg_with_error: {
+    my $sel = WWW::Selenium::Driver->new( backend => 'InMemory' );
+    isa_ok $sel, 'WWW::Selenium::Driver';
+    my $mock_cb = WWW::Selenium::CommandBridge::Backend::InMemory->new;
+    $mock_cb->result('Bad');
+    like $sel->drive(MockCGI->new( cmd => 'open', opt1 => '/foo' )),
+         qr#Result: Bad#;
+    is $mock_cb->{cmd}{cmd}, 'open';
+    is $mock_cb->{cmd}{opt1}, '/foo';
+    is $mock_cb->{cmd}{opt2}, '';
+}
+
+Remote_CommandBridge_one_arg: {
+    my $sel = WWW::Selenium::Driver->new( backend => 'InMemory' );
+    isa_ok $sel, 'WWW::Selenium::Driver';
+    my $mock_cb = WWW::Selenium::CommandBridge::Backend::InMemory->new;
+    $mock_cb->result('OK');
+    like $sel->drive(MockCGI->new( cmd => 'open' )),
+         qr#opt1 is mandatory#;
+}
+
+
+
+
 package MockCGI;
 use strict;
 use warnings;
@@ -37,6 +74,7 @@ sub new {
     my ($class, %opts) = @_;
     my $self = \%opts;
     bless $self, $class;
+    return $self;
 }
 
 sub param { $_[0]->{$_[1]} }

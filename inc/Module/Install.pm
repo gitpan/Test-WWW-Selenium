@@ -1,4 +1,4 @@
-#line 1 "/Users/lukec/src/perl/Test-WWW-Selenium/inc/Module/Install.pm - /usr/local/ActivePerl-5.8/lib/site_perl/5.8.7/Module/Install.pm"
+#line 1 "/Users/lukec/src/perl/Test-WWW-Selenium/inc/Module/Install.pm - /opt/lang/perl/pmperl/lib/site_perl/5.6.1/Module/Install.pm"
 package Module::Install;
 
 use 5.004;

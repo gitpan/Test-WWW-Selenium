@@ -1,4 +1,4 @@
-#line 1 "inc/Module/Install/Base.pm - /usr/local/ActivePerl-5.8/lib/site_perl/5.8.7/Module/Install/Base.pm"
+#line 1 "inc/Module/Install/Base.pm - /opt/lang/perl/pmperl/lib/site_perl/5.6.1/Module/Install/Base.pm"
 package Module::Install::Base;
 
 # Suspend handler for "redefined" warnings

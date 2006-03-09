@@ -1,4 +1,4 @@
-#line 1 "inc/Module/Install/AutoInstall.pm - /usr/local/ActivePerl-5.8/lib/site_perl/5.8.7/Module/Install/AutoInstall.pm"
+#line 1 "inc/Module/Install/AutoInstall.pm - /opt/lang/perl/pmperl/lib/site_perl/5.6.1/Module/Install/AutoInstall.pm"
 package Module::Install::AutoInstall;
 use Module::Install::Base; @ISA = qw(Module::Install::Base);
 

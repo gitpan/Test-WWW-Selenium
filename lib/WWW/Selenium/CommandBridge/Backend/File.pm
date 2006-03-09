@@ -120,8 +120,8 @@ sub write_file {
     open(my $fh, ">$tmp_file") or die "Can't open $tmp_file: $!";
     print $fh $content;
     close $fh or die "Can't write $tmp_file: $!";
+    chmod 0666, $tmp_file or die "Can't chmod 0666, $tmp_file: $!";
     rename $tmp_file, $filename or die "Can't rename $tmp_file, $filename: $!";
-    chmod 0666, $filename or die "Can't chmod 0666, $filename: $!";
     cb_log("Wrote ($content) to $filename");
 }
 

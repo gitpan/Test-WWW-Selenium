@@ -13,7 +13,7 @@ sub new {
     return $self;
 }
 
-sub reset           { delete $_[0]->{cmd}; delete $_[0]->{result} }
+sub reset           { delete $_[0]->{cmd}; delete $_[0]->{result}; $_[0] }
 sub set_timeout     { $_[0]->{timeout} = $_[1] }
 sub queue_command   { $_[0]->{cmd} = $_[1] }
 sub get_command     { delete $_[0]->{cmd} }
