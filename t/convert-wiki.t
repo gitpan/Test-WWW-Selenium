@@ -9,7 +9,7 @@ if ($@) {
     exit;
 }
 else {
-    plan tests => 42;
+    plan tests => 3;
 }
 
 my $converter = 'script/convert_wiki_to_perl.pl';

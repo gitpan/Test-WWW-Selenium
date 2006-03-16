@@ -1,5 +1,9 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+0.10 - Thu Mar 16 09:31:18 PST 2006
+    - update to latest Module::Install
+    - fix test numbering problem
+
 0.08 - Wed Mar 15 23:03:32 PST 2006
     - fixed dependencies on Test packages and WWW::Selenium::Utils
     - Allow file backend to specify where it keeps it's files
