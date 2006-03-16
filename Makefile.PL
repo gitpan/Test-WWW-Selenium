@@ -5,11 +5,13 @@ use inc::Module::Install;
 
 name            'Test-WWW-Selenium';
 build_requires  'Test::More'        => '0.42';
+build_requires  'Test::Exception'   => 0;
+build_requires  'Test::Differences' => 0;
+build_requires  'Test::LongString'  => 0;
 license         'perl';
 
 # used to convert wiki files to perl test scripts
 recommends      'WWW::Selenium::Utils' => '0.08';
-recommends      'Test::Differences'     => 0;
 
 # examples of other commands:
 # requires        'Carp'              => 0;

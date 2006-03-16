@@ -9,7 +9,7 @@ sub new {
     my $self = { };
     bless $self, $class;
 
-    $self->{bridge} = WWW::Selenium::CommandBridge->new(backend => $args{backend});
+    $self->{bridge} = WWW::Selenium::CommandBridge->new( %args );
     return $self;
 }
 
@@ -36,7 +36,6 @@ sub drive {
         }
     };
     if ($@) {
-        warn $@;
         return header . "Error: $@";
     }
     return $response if defined $response;

@@ -4,17 +4,18 @@ use warnings;
 use Test::More tests => 60;
 use lib 't/lib';
 use lib 'lib';
+use File::Path qw(rmtree);
 
 BEGIN {
     use_ok 'WWW::Selenium::CommandBridge';
 }
 
-my $cmd_file = '/tmp/selenium/driven.commands';
-my $res_file = '/tmp/selenium/driven.results';
+my $cmd_file = 't/selenium/driven.commands';
+my $res_file = 't/selenium/driven.results';
 
 Command_flow: {
     for my $backend (qw(InMemory File)) {
-        diag "Testing $backend backend";
+        print "Testing $backend backend\n";
         my $scb = new_bridge( backend => $backend );
         $scb->reset;
         # test driver will add a command
@@ -118,6 +119,8 @@ Invalide_backend: {
 sub new_bridge {
     my (%opts) = @_;
     $opts{backend} ||= 'InMemory';
+    $opts{tmp_dir} = 't/selenium' if $opts{backend} eq 'File';
+    rmtree 't/selenium';
     my $scb = WWW::Selenium::CommandBridge->new( %opts );
     isa_ok $scb, 'WWW::Selenium::CommandBridge';
     return $scb;

@@ -1,6 +1,11 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
-0.06
+0.08 - Wed Mar 15 23:03:32 PST 2006
+    - fixed dependencies on Test packages and WWW::Selenium::Utils
+    - Allow file backend to specify where it keeps it's files
+    - minor testing improvements
+
+0.06  Thu Mar  9 00:01:34 PST 2006
     - Added descriptive png images to doc/ 
     - Added support for CGI driver to store/retrive commands and results
     - Added script to convert a wiki syntax file into a perl script

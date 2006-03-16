@@ -10,11 +10,11 @@ sub new {
     bless $self, $class;
 
     # default to a file based backend
-    my $backend = $opts{backend} || 'File';
+    my $backend = delete $opts{backend} || 'File';
     my $backend_mod = "WWW::Selenium::CommandBridge::Backend::$backend";
     eval "require $backend_mod";
     die "Cannot load the '$backend' CommandBridge backend: $@" if $@;
-    $self->{backend} = $backend_mod->new;
+    $self->{backend} = $backend_mod->new(%opts);
     $self->set_timeout(15);
 
     return $self;

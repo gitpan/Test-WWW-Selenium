@@ -107,6 +107,14 @@ sub AUTOLOAD {
         return $result;
     };
 
+    if ($command eq 'pause') {
+        $sub = sub {
+            my ($self, $msec) = @_;
+            select( undef, undef, undef, $msec/1000 );
+            return 'OK';
+        };
+    }
+
     die "Could not load '$AUTOLOAD'" unless $sub;
     {
         no strict 'refs';

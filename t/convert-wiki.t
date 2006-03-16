@@ -1,7 +1,16 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Test::More qw(no_plan);
+use Test::More;
+
+eval 'require WWW::Selenium::Utils';
+if ($@) {
+    plan skip_all => "WWW::Selenium::Utils is missing";
+    exit;
+}
+else {
+    plan tests => 42;
+}
 
 my $converter = 'script/convert_wiki_to_perl.pl';
 ok -e $converter;

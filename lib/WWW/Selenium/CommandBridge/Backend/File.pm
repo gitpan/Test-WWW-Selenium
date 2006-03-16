@@ -10,9 +10,10 @@ my $self; # singleton
 sub new {
     my ($class, %opts) = @_;
 
-    my $dir = '/tmp/selenium';
+    my $dir = $opts{tmp_dir} || '/tmp/selenium';
     unless (-d $dir) {
         mkdir $dir or die "Can't mkdir $dir: $!";
+        chmod 0777, $dir or die "Can't chmod 0777, $dir: $!";
     }
 
     $self = {
@@ -45,6 +46,7 @@ sub get_command {
 
     my $cmd_file = $self->{command_file};
     my $cb = sub {
+        cb_log("Checking for $cmd_file...\n");
         if (-e $cmd_file) {
             my $line = cat($cmd_file);
             cb_log("get_command - read ($line)\n");
@@ -62,7 +64,9 @@ sub get_result {
 
     my $res_file = $self->{result_file};
     my $cb = sub {
+        cb_log("Checking for $res_file...\n");
         if (-e $res_file) {
+            cb_log("Found $res_file...\n");
             my $result = cat($res_file);
             chomp $result;
             unlink $res_file or die "Can't unlink $res_file: $!";
@@ -122,11 +126,11 @@ sub write_file {
     close $fh or die "Can't write $tmp_file: $!";
     chmod 0666, $tmp_file or die "Can't chmod 0666, $tmp_file: $!";
     rename $tmp_file, $filename or die "Can't rename $tmp_file, $filename: $!";
-    cb_log("Wrote ($content) to $filename");
+    cb_log("Wrote ($content) to $filename\n");
 }
 
 sub cb_log {
-    print STDERR $_[0], "\n" if $self->{verbose};
+    print STDERR $_[0]  if $self->{verbose};
 }
 
 1;

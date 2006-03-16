@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Test::More qw/no_plan/;
+use Test::More tests => 74;
 use Test::Exception;
 use lib 'lib';
 
