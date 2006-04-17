@@ -1,3 +1,15 @@
-Add architecture diagrams 
-Add a "remote" command bridge backend to enable multi-machine testing
-Auto-launch a browser
+- bundle test modules with distribution M::I::Bundle
+
+- WWW::Selenium
+  - check that browser_url is sane
+
+- have Test::WWW::Selenium->new launch selenium-rc.jar
+
+- email dan about:
+  - typo in WWW::Selenium synopsis ;);
+  - 4 spaces for selenium commands
+  - get_boolean|number{_array} are they really necessary?
+  - patch to WWW::Selenium
+  - bug in get_string_array parsing ('one, two, three' doesn't return three)
+
+- test that synopsis examples really work

@@ -1,8 +1,27 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+0.20 - Mon Apr 17 00:54:42 PDT 2006
+    - major refactoring to use Selenium Remote Control (SRC)
+    - WWW/Selenium.pm comes from Dan Fabulich
+      - From selenium-rc developer release 0.7.2
+      - changed to use named arguments to new
+      - provide reasonable default args
+      - skip undefined arguments in do_command
+      - add a verbose mode
+      - simplified get_string_array to split with a regex
+      - remove unused get_(number|boolean)[_array] functions
+      - add some extra docs
+    - Updated Test::WWW::Selenium to use new WWW::Selenium
+    - new unit tests
+
+0.11 - not released
+    - Removed get/set_url
+    - fixed driver redirect
+
 0.10 - Thu Mar 16 09:31:18 PST 2006
     - update to latest Module::Install
     - fix test numbering problem
+    - Thanks to Scott Lanning (SLANNING) for bug reports
 
 0.08 - Wed Mar 15 23:03:32 PST 2006
     - fixed dependencies on Test packages and WWW::Selenium::Utils
