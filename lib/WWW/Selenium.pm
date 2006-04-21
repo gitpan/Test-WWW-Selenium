@@ -362,11 +362,11 @@ browser-specific prompting.
 
 =back
 
+=back
+
 =cut
 
 ### From here on, everything's auto-generated from XML
-
-
 
 =item $sel-E<gt>click($locator)
 
