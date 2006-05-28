@@ -30,21 +30,21 @@ WWW::Selenium - Perl Client for the Selenium Remote Control test tool
 
 =head1 SYNOPSIS
 
-	use WWW::Selenium;
-	
-	my $sel = WWW::Selenium->new( host => "localhost", 
+    use WWW::Selenium;
+    
+    my $sel = WWW::Selenium->new( host => "localhost", 
                                       port => 4444, 
                                       browser => "*iexplore", 
                                       browser_url => "http://www.google.com",
                                     );
-	
-	$sel->start;
-	$sel->open "http://www.google.com";
-	$sel->type "q", "hello world";
-	$sel->click "btnG";
-	$sel->wait_for_page_to_load 5000;
-	print $sel->get_title;
-	$sel->stop;
+    
+    $sel->start;
+    $sel->open "http://www.google.com";
+    $sel->type "q", "hello world";
+    $sel->click "btnG";
+    $sel->wait_for_page_to_load 5000;
+    print $sel->get_title;
+    $sel->stop;
 
 =head1 DESCRIPTION
 
@@ -74,9 +74,9 @@ the Selenium Server.  (The Selenium Server is a Java application.)
 =head3 Element Locators
 
 
-Element Locators tell Selenium which HTML element a command refers to. Many
-commands require an Element Locator as a parameter.
-
+Element Locators tell Selenium which HTML element a command refers to.
+The format of a locator is:
+I<locatorType>B<=>I<argument>
 We support the following strategies for locating elements:
 
 
@@ -97,6 +97,32 @@ Select the element with the specified @id attribute.
 =item B<name>=I<name>
 
 Select the first element with the specified @name attribute.
+
+
+
+=over
+
+
+=item * username
+
+=item * name=username
+
+
+=back
+
+
+The name may optionally be followed by one or more I<element-filters>, separated from the name by whitespace.  If the I<filterType> is not specified, B<value> is assumed.
+
+
+
+=over
+
+
+=item * name=flavour value=chocolate
+
+
+=back
+
 
 =item B<dom>=I<javascriptExpression>
 
@@ -119,8 +145,7 @@ Model. DOM locators I<must> begin with "document.".
 
 =item B<xpath>=I<xpathExpression>
 
-Locate an element using an XPath expression. XPath locators
-I<must> begin with "//".
+Locate an element using an XPath expression.
 
 
 =over
@@ -169,6 +194,16 @@ strategies:
 
 =back
 
+=head3 Element Filters
+
+Element filters can be used with a locator to refine a list of candidate elements.  They are currently used only in the 'name' element-locator.
+Filters look much like locators, ie.
+I<filterType>B<=>I<argument>Supported element-filters are:
+B<value=>I<valuePattern>
+
+Matches elements based on their values.  This is particularly useful for refining a list of similarly-named toggle-buttons.B<index=>I<index>
+
+Selects a single element based on its position in the list (offset from zero).
 =head3 String-match Patterns
 
 
@@ -207,6 +242,9 @@ pattern.
 
 =cut
 
+eval 'require Encode';
+my $encode_present = !$@;
+
 ### This part is hard-coded in the XSL
 sub new {
     my ($class, %args) = @_;
@@ -229,9 +267,9 @@ sub start {
 }
 
 sub stop {
-	my $self = shift;
-	$self->do_command("testComplete");
-	$self->{session_id} = undef;
+    my $self = shift;
+    $self->do_command("testComplete");
+    $self->{session_id} = undef;
 }
 
 sub do_command {
@@ -242,11 +280,11 @@ sub do_command {
     my $i = 1;
     @args = grep defined, @args;
     while (@args) {
-        $fullurl .= "&$i=" . uri_escape(shift @args);
+        $fullurl .= "&$i=" . URI::Escape::uri_escape_utf8(shift @args);
         $i++;
     }
     if (defined $self->{session_id}) {
-    	$fullurl .= "&sessionId=$self->{session_id}";
+        $fullurl .= "&sessionId=$self->{session_id}";
     }
     print "---> Requesting $fullurl\n" if $self->{verbose};
 
@@ -262,6 +300,7 @@ sub do_command {
     else {
         die "Error requesting $fullurl:\n" . $response->status_line . "\n";
     }
+    $result = decode_utf8($result) if $encode_present;
     die "Error requesting $fullurl:\n$result\n" unless $result =~ /^OK/;
     return $result;
 }
@@ -274,10 +313,69 @@ sub get_string {
 
 sub get_string_array {
     my $self = shift;
-    return map { s#\\([\\,])#$1#g; $_ }  # strip extra \'s
-           # split on not a '\', then a ','
-           # uses a zero-width positive look-behind assertion
-           split /(?<=[^\\]),/, $self->get_string(@_); 
+    my $result = $self->get_string(@_);
+    my $token = "";
+    my @tokens = ();
+    my @chars = split(//, $result);
+    for (my $i = 0; $i < @chars; $i++) {
+        my $char = $chars[$i];
+        if ($char eq '\\') {
+            $i++;
+            $char = $chars[$i];
+            $token .= $char;
+        } elsif ($char eq ',') {
+            push (@tokens, $token);
+            $token = "";
+        } else {
+            $token .= $char;
+        }
+    }
+    push (@tokens, $token);
+    return @tokens;
+}
+
+sub get_number {
+    my $self = shift;
+    my $result = $self->get_string(@_);
+    # Is there something else I need to do here?
+    return $result;
+}
+
+sub get_number_array {
+    my $self = shift;
+    my @result = $self->get_string_array(@_);
+    # Is there something else I need to do here?
+    return @result;
+}
+
+sub get_boolean {
+    my $self = shift;
+    my $result = $self->get_string(@_);
+    if ($result eq "true") {
+        return 1;
+    }
+    if ($result eq "false") {
+        return 0;
+    }
+    die "result is neither 'true' nor 'false': $result";
+}
+
+sub get_boolean_array {
+    my $self = shift;
+    my @result = $self->get_string_array(@_);
+    my @boolarr = ();
+    for (my $i = 0; $i < @result; $i++) {
+        if ($result[$i] eq "true") {
+            push (@boolarr, 1);
+            next;
+        }
+        if ($result[$i] eq "false") {
+            push (@boolarr, 1);
+            next;
+        }
+        die "result is neither 'true' nor 'false': ". $result[$i];
+    }
+    return @boolarr;
 }
 
 =head2 METHODS
@@ -354,7 +452,7 @@ path to Internet Explorer.
 
 You may also simply specify the absolute path to your browser
 executable, or use a relative path to your executable (which we'll try
-to find on your path).  <b>Warning:</b> If you
+to find on your path).  B<Warning:> If you
 specify your own custom browser, it's up to you to configure it
 correctly.  At a minimum, you'll need to configure your
 browser to use the Selenium Server as a proxy, and disable all
@@ -362,11 +460,11 @@ browser-specific prompting.
 
 =back
 
-=back
-
 =cut
 
 ### From here on, everything's auto-generated from XML
+
+
 
 =item $sel-E<gt>click($locator)
 
@@ -379,8 +477,8 @@ $locator is an element locator.
 =cut
 
 sub click {
-	my $self = shift;
-	$self->do_command("click", @_);
+    my $self = shift;
+    $self->do_command("click", @_);
 }
 
 
@@ -395,8 +493,8 @@ $event_name is the event name, e.g. "focus" or "blur".
 =cut
 
 sub fire_event {
-	my $self = shift;
-	$self->do_command("fireEvent", @_);
+    my $self = shift;
+    $self->do_command("fireEvent", @_);
 }
 
 
@@ -411,8 +509,8 @@ $keycode is the numeric keycode of the key to be pressed, normally the
 =cut
 
 sub key_press {
-	my $self = shift;
-	$self->do_command("keyPress", @_);
+    my $self = shift;
+    $self->do_command("keyPress", @_);
 }
 
 
@@ -427,8 +525,8 @@ $keycode is the numeric keycode of the key to be pressed, normally the
 =cut
 
 sub key_down {
-	my $self = shift;
-	$self->do_command("keyDown", @_);
+    my $self = shift;
+    $self->do_command("keyDown", @_);
 }
 
 
@@ -443,8 +541,8 @@ $keycode is the numeric keycode of the key to be released, normally the
 =cut
 
 sub key_up {
-	my $self = shift;
-	$self->do_command("keyUp", @_);
+    my $self = shift;
+    $self->do_command("keyUp", @_);
 }
 
 
@@ -457,8 +555,8 @@ $locator is an element locator.
 =cut
 
 sub mouse_over {
-	my $self = shift;
-	$self->do_command("mouseOver", @_);
+    my $self = shift;
+    $self->do_command("mouseOver", @_);
 }
 
 
@@ -472,8 +570,8 @@ $locator is an element locator.
 =cut
 
 sub mouse_down {
-	my $self = shift;
-	$self->do_command("mouseDown", @_);
+    my $self = shift;
+    $self->do_command("mouseDown", @_);
 }
 
 
@@ -491,8 +589,8 @@ $value is the value to type.
 =cut
 
 sub type {
-	my $self = shift;
-	$self->do_command("type", @_);
+    my $self = shift;
+    $self->do_command("type", @_);
 }
 
 
@@ -505,8 +603,8 @@ $locator is an element locator.
 =cut
 
 sub check {
-	my $self = shift;
-	$self->do_command("check", @_);
+    my $self = shift;
+    $self->do_command("check", @_);
 }
 
 
@@ -519,12 +617,12 @@ $locator is an element locator.
 =cut
 
 sub uncheck {
-	my $self = shift;
-	$self->do_command("uncheck", @_);
+    my $self = shift;
+    $self->do_command("uncheck", @_);
 }
 
 
-=item $sel-E<gt>select($locator, $option_locator)
+=item $sel-E<gt>select($select_locator, $option_locator)
 
 Select an option from a drop-down using an option locator.
 
@@ -599,18 +697,18 @@ matches an option based on its index (offset from zero).
 
 =back
 
-Without a prefix, the default behaviour is to only match on labels.
+If no option locator prefix is provided, the default behaviour is to match on B<label>.
 
 
 
-$locator is an element locator identifying a drop-down menu.  
+$select_locator is an element locator identifying a drop-down menu.  
 $option_locator is an option locator (a label by default).  
 
 =cut
 
 sub select {
-	my $self = shift;
-	$self->do_command("select", @_);
+    my $self = shift;
+    $self->do_command("select", @_);
 }
 
 
@@ -626,8 +724,8 @@ $option_locator is an option locator (a label by default).
 =cut
 
 sub add_selection {
-	my $self = shift;
-	$self->do_command("addSelection", @_);
+    my $self = shift;
+    $self->do_command("addSelection", @_);
 }
 
 
@@ -643,8 +741,8 @@ $option_locator is an option locator (a label by default).
 =cut
 
 sub remove_selection {
-	my $self = shift;
-	$self->do_command("removeSelection", @_);
+    my $self = shift;
+    $self->do_command("removeSelection", @_);
 }
 
 
@@ -658,8 +756,8 @@ $form_locator is an element locator for the form you want to submit.
 =cut
 
 sub submit {
-	my $self = shift;
-	$self->do_command("submit", @_);
+    my $self = shift;
+    $self->do_command("submit", @_);
 }
 
 
@@ -667,6 +765,9 @@ sub submit {
 
 Opens an URL in the test frame. This accepts both relative and absolute
 URLs.
+
+The "open" command waits for the page to load before proceeding,
+ie. the "AndWait" suffix is implicit.
 
 I<Note>: The URL must be on the same domain as the runner HTML
 due to security restrictions in the browser (Same Origin Policy). If you
@@ -678,8 +779,8 @@ $url is the URL to open; may be relative or absolute.
 =cut
 
 sub open {
-	my $self = shift;
-	$self->do_command("open", @_);
+    my $self = shift;
+    $self->do_command("open", @_);
 }
 
 
@@ -694,25 +795,39 @@ $window_i_d is the JavaScript window ID of the window to select.
 =cut
 
 sub select_window {
-	my $self = shift;
-	$self->do_command("selectWindow", @_);
+    my $self = shift;
+    $self->do_command("selectWindow", @_);
+}
+
+
+=item $sel-E<gt>wait_for_pop_up($window_i_d, $timeout)
+
+Waits for a popup window to appear and load up.
+
+$window_i_d is the JavaScript window ID of the window that will appear.  
+$timeout is a timeout in milliseconds, after which the action will return with an error.  
+
+=cut
+
+sub wait_for_pop_up {
+    my $self = shift;
+    $self->do_command("waitForPopUp", @_);
 }
 
 
 =item $sel-E<gt>choose_cancel_on_next_confirmation()
 
-Instructs Selenium to click "Cancel" on the next JavaScript confirmation
-dialog to be raised. By default, the confirm function will return true,
-having the same effect as manually clicking OK. After running this
-command, the next confirmation will behave as if the user had clicked
-Cancel.
+By default, Selenium's overridden window.confirm() function will
+return true, as if the user had manually clicked OK.  After running
+this command, the next call to confirm() will return false, as if
+the user had clicked Cancel.
 
 
 =cut
 
 sub choose_cancel_on_next_confirmation {
-	my $self = shift;
-	$self->do_command("chooseCancelOnNextConfirmation", @_);
+    my $self = shift;
+    $self->do_command("chooseCancelOnNextConfirmation", @_);
 }
 
 
@@ -726,8 +841,8 @@ $answer is the answer to give in response to the prompt pop-up.
 =cut
 
 sub answer_on_next_prompt {
-	my $self = shift;
-	$self->do_command("answerOnNextPrompt", @_);
+    my $self = shift;
+    $self->do_command("answerOnNextPrompt", @_);
 }
 
 
@@ -739,8 +854,21 @@ Simulates the user clicking the "back" button on their browser.
 =cut
 
 sub go_back {
-	my $self = shift;
-	$self->do_command("goBack", @_);
+    my $self = shift;
+    $self->do_command("goBack", @_);
+}
+
+
+=item $sel-E<gt>refresh()
+
+Simulates the user clicking the "Refresh" button on their browser.
+
+
+=cut
+
+sub refresh {
+    my $self = shift;
+    $self->do_command("refresh", @_);
 }
 
 
@@ -753,21 +881,75 @@ window or tab.
 =cut
 
 sub close {
-	my $self = shift;
-	$self->do_command("close", @_);
+    my $self = shift;
+    $self->do_command("close", @_);
+}
+
+
+=item $sel-E<gt>is_alert_present()
+
+Has an alert occurred?
+
+
+This function never throws an exception
+
+
+
+
+=cut
+
+sub is_alert_present {
+    my $self = shift;
+    return $self->get_boolean("isAlertPresent", @_);
+}
+
+
+=item $sel-E<gt>is_prompt_present()
+
+Has a prompt occurred?
+
+
+This function never throws an exception
+
+
+
+
+=cut
+
+sub is_prompt_present {
+    my $self = shift;
+    return $self->get_boolean("isPromptPresent", @_);
+}
+
+
+=item $sel-E<gt>is_confirmation_present()
+
+Has confirm() been called?
+
+
+This function never throws an exception
+
+
+
+
+=cut
+
+sub is_confirmation_present {
+    my $self = shift;
+    return $self->get_boolean("isConfirmationPresent", @_);
 }
 
 
 =item $sel-E<gt>get_alert()
 
-Retrieves the message of a javascript alert generated during the previous action, or fail if there were no alerts.
+Retrieves the message of a JavaScript alert generated during the previous action, or fail if there were no alerts.
 
 Getting an alert has the same effect as manually clicking OK. If an
 alert is generated but you do not get/verify it, the next Selenium action
 will fail.
-NOTE: under Selenium, javascript alerts will NOT pop up a visible alert
+NOTE: under Selenium, JavaScript alerts will NOT pop up a visible alert
 dialog.
-NOTE: Selenium does NOT support javascript alerts that are generated in a
+NOTE: Selenium does NOT support JavaScript alerts that are generated in a
 page's onload() event handler. In this case a visible dialog WILL be
 generated and Selenium will hang until someone manually clicks OK.
 
@@ -776,14 +958,14 @@ generated and Selenium will hang until someone manually clicks OK.
 =cut
 
 sub get_alert {
-	my $self = shift;
-	return $self->get_string("getAlert", @_);
+    my $self = shift;
+    return $self->get_string("getAlert", @_);
 }
 
 
 =item $sel-E<gt>get_confirmation()
 
-Retrieves the message of a javascript confirmation dialog generated during
+Retrieves the message of a JavaScript confirmation dialog generated during
 the previous action.
 
 
@@ -793,11 +975,11 @@ chooseCancelOnNextConfirmation command. If an confirmation is generated
 but you do not get/verify it, the next Selenium action will fail.
 
 
-NOTE: under Selenium, javascript confirmations will NOT pop up a visible
+NOTE: under Selenium, JavaScript confirmations will NOT pop up a visible
 dialog.
 
 
-NOTE: Selenium does NOT support javascript confirmations that are
+NOTE: Selenium does NOT support JavaScript confirmations that are
 generated in a page's onload() event handler. In this case a visible
 dialog WILL be generated and Selenium will hang until you manually click
 OK.
@@ -808,22 +990,22 @@ OK.
 =cut
 
 sub get_confirmation {
-	my $self = shift;
-	return $self->get_string("getConfirmation", @_);
+    my $self = shift;
+    return $self->get_string("getConfirmation", @_);
 }
 
 
 =item $sel-E<gt>get_prompt()
 
-Retrieves the message of a javascript question prompt dialog generated during
+Retrieves the message of a JavaScript question prompt dialog generated during
 the previous action.
 
 Successful handling of the prompt requires prior execution of the
 answerOnNextPrompt command. If a prompt is generated but you
 do not get/verify it, the next Selenium action will fail.
-NOTE: under Selenium, javascript prompts will NOT pop up a visible
+NOTE: under Selenium, JavaScript prompts will NOT pop up a visible
 dialog.
-NOTE: Selenium does NOT support javascript prompts that are generated in a
+NOTE: Selenium does NOT support JavaScript prompts that are generated in a
 page's onload() event handler. In this case a visible dialog WILL be
 generated and Selenium will hang until someone manually clicks OK.
 
@@ -832,8 +1014,8 @@ generated and Selenium will hang until someone manually clicks OK.
 =cut
 
 sub get_prompt {
-	my $self = shift;
-	return $self->get_string("getPrompt", @_);
+    my $self = shift;
+    return $self->get_string("getPrompt", @_);
 }
 
 
@@ -845,12 +1027,12 @@ Gets the absolute URL of the current page.
 =cut
 
 sub get_absolute_location {
-	my $self = shift;
-	return $self->get_string("getAbsoluteLocation", @_);
+    my $self = shift;
+    return $self->get_string("getAbsoluteLocation", @_);
 }
 
 
-=item $sel-E<gt>assert_location($expected_location)
+=item $sel-E<gt>is_location($expected_location)
 
 Verify the location of the current page ends with the expected location.
 If an URL querystring is provided, this is checked as well.
@@ -859,9 +1041,9 @@ $expected_location is the location to match.
 
 =cut
 
-sub assert_location {
-	my $self = shift;
-	$self->do_command("assertLocation", @_);
+sub is_location {
+    my $self = shift;
+    return $self->get_boolean("isLocation", @_);
 }
 
 
@@ -873,21 +1055,21 @@ Gets the title of the current page.
 =cut
 
 sub get_title {
-	my $self = shift;
-	return $self->get_string("getTitle", @_);
+    my $self = shift;
+    return $self->get_string("getTitle", @_);
 }
 
 
 =item $sel-E<gt>get_body_text()
 
-Get the entire text of the page.
+Gets the entire text of the page.
 
 
 =cut
 
 sub get_body_text {
-	my $self = shift;
-	return $self->get_string("getBodyText", @_);
+    my $self = shift;
+    return $self->get_string("getBodyText", @_);
 }
 
 
@@ -902,8 +1084,8 @@ $locator is an element locator.
 =cut
 
 sub get_value {
-	my $self = shift;
-	return $self->get_string("getValue", @_);
+    my $self = shift;
+    return $self->get_string("getValue", @_);
 }
 
 
@@ -919,8 +1101,8 @@ $locator is an element locator.
 =cut
 
 sub get_text {
-	my $self = shift;
-	return $self->get_string("getText", @_);
+    my $self = shift;
+    return $self->get_string("getText", @_);
 }
 
 
@@ -929,10 +1111,13 @@ sub get_text {
 Gets the result of evaluating the specified JavaScript snippet.  The snippet may 
 have multiple lines, but only the result of the last line will be returned.
 
-Note that, by default, the snippet will be run in the runner's test window, not in the window
-of your application.  To get the window of your application, you can use
-the JavaScript snippet C<selenium.browserbot.getCurrentWindow()>, and then
-run your JavaScript in there.
+Note that, by default, the snippet will run in the context of the "selenium"
+object itself, so C<this> will refer to the Selenium object, and C<window> will
+refer to the top-level runner test window, not the window of your application.
+If you need a reference to the window of your application, you can refer
+to C<this.browserbot.getCurrentWindow()> and if you need to use
+a locator to refer to a single element in your application page, you can
+use C<this.page().findElement("foo")> where "foo" is your locator.
 
 
 $script is the JavaScript snippet to run.  
@@ -940,22 +1125,22 @@ $script is the JavaScript snippet to run.
 =cut
 
 sub get_eval {
-	my $self = shift;
-	return $self->get_string("getEval", @_);
+    my $self = shift;
+    return $self->get_string("getEval", @_);
 }
 
 
 =item $sel-E<gt>get_checked($locator)
 
-Get whether a toggle-button (checkbox/radio) is checked.  Fails if the specified element doesn't exist or isn't a toggle-button.
+Gets whether a toggle-button (checkbox/radio) is checked.  Fails if the specified element doesn't exist or isn't a toggle-button.
 
 $locator is an element locator pointing to a checkbox or radio button.  
 
 =cut
 
 sub get_checked {
-	my $self = shift;
-	return $self->get_string("getChecked", @_);
+    my $self = shift;
+    return $self->get_string("getChecked", @_);
 }
 
 
@@ -969,12 +1154,12 @@ $table_cell_address is a cell address, e.g. "foo.1.4".
 =cut
 
 sub get_table {
-	my $self = shift;
-	return $self->get_string("getTable", @_);
+    my $self = shift;
+    return $self->get_string("getTable", @_);
 }
 
 
-=item $sel-E<gt>assert_selected($locator, $option_locator)
+=item $sel-E<gt>is_selected($locator, $option_locator)
 
 Verifies that the selected option of a drop-down satisfies the optionSpecifier.
 
@@ -986,9 +1171,9 @@ $option_locator is an option locator, typically just an option label (e.g. "John
 
 =cut
 
-sub assert_selected {
-	my $self = shift;
-	$self->do_command("assertSelected", @_);
+sub is_selected {
+    my $self = shift;
+    return $self->get_boolean("isSelected", @_);
 }
 
 
@@ -1001,8 +1186,8 @@ $locator is an element locator.
 =cut
 
 sub get_selected_options {
-	my $self = shift;
-	return $self->get_string_array("getSelectedOptions", @_);
+    my $self = shift;
+    return $self->get_string_array("getSelectedOptions", @_);
 }
 
 
@@ -1015,8 +1200,8 @@ $locator is an element locator.
 =cut
 
 sub get_select_options {
-	my $self = shift;
-	return $self->get_string_array("getSelectOptions", @_);
+    my $self = shift;
+    return $self->get_string_array("getSelectOptions", @_);
 }
 
 
@@ -1029,12 +1214,12 @@ $attribute_locator is an element locator followed by an.
 =cut
 
 sub get_attribute {
-	my $self = shift;
-	return $self->get_string("getAttribute", @_);
+    my $self = shift;
+    return $self->get_string("getAttribute", @_);
 }
 
 
-=item $sel-E<gt>assert_text_present($pattern)
+=item $sel-E<gt>is_text_present($pattern)
 
 Verifies that the specified text pattern appears somewhere on the rendered page shown to the user.
 
@@ -1042,27 +1227,13 @@ $pattern is a pattern to match with the text of the page.
 
 =cut
 
-sub assert_text_present {
-	my $self = shift;
-	$self->do_command("assertTextPresent", @_);
+sub is_text_present {
+    my $self = shift;
+    return $self->get_boolean("isTextPresent", @_);
 }
 
 
-=item $sel-E<gt>assert_text_not_present($pattern)
-
-Verifies that the specified text pattern does NOT appear anywhere on the rendered page.
-
-$pattern is a pattern to match with the text of the page.  
-
-=cut
-
-sub assert_text_not_present {
-	my $self = shift;
-	$self->do_command("assertTextNotPresent", @_);
-}
-
-
-=item $sel-E<gt>assert_element_present($locator)
+=item $sel-E<gt>is_element_present($locator)
 
 Verifies that the specified element is somewhere on the page.
 
@@ -1070,85 +1241,42 @@ $locator is an element locator.
 
 =cut
 
-sub assert_element_present {
-	my $self = shift;
-	$self->do_command("assertElementPresent", @_);
+sub is_element_present {
+    my $self = shift;
+    return $self->get_boolean("isElementPresent", @_);
 }
 
 
-=item $sel-E<gt>assert_element_not_present($locator)
+=item $sel-E<gt>is_visible($locator)
 
-Verifies that the specified element is NOT on the page.
-
-$locator is an element locator.  
-
-=cut
-
-sub assert_element_not_present {
-	my $self = shift;
-	$self->do_command("assertElementNotPresent", @_);
-}
-
-
-=item $sel-E<gt>assert_visible($locator)
-
-Verifies that the specified element is both present and visible. An
+Determines if the specified element is visible. An
 element can be rendered invisible by setting the CSS "visibility"
 property to "hidden", or the "display" property to "none", either for the
-element itself or one if its ancestors.
+element itself or one if its ancestors.  This method will fail if
+the element is not present.
 
 $locator is an element locator.  
 
 =cut
 
-sub assert_visible {
-	my $self = shift;
-	$self->do_command("assertVisible", @_);
+sub is_visible {
+    my $self = shift;
+    return $self->get_boolean("isVisible", @_);
 }
 
 
-=item $sel-E<gt>assert_not_visible($locator)
+=item $sel-E<gt>is_editable($locator)
 
-Verifies that the specified element is NOT visible; elements that are
-simply not present are also considered invisible.
-
-$locator is an element locator.  
-
-=cut
-
-sub assert_not_visible {
-	my $self = shift;
-	$self->do_command("assertNotVisible", @_);
-}
-
-
-=item $sel-E<gt>assert_editable($locator)
-
-Verifies that the specified element is editable, ie. it's an input
-element, and hasn't been disabled.
+Determines whether the specified input element is editable, ie hasn't been disabled.
+This method will fail if the specified element isn't an input element.
 
 $locator is an element locator.  
 
 =cut
 
-sub assert_editable {
-	my $self = shift;
-	$self->do_command("assertEditable", @_);
-}
-
-
-=item $sel-E<gt>assert_not_editable($locator)
-
-Verifies that the specified element is NOT editable, ie. it's NOT an
-input element, or has been disabled.
-
-$locator is an element locator.  
-
-=cut
-
-sub assert_not_editable {
-	my $self = shift;
-	$self->do_command("assertNotEditable", @_);
+sub is_editable {
+    my $self = shift;
+    return $self->get_boolean("isEditable", @_);
 }
 
 
@@ -1163,8 +1291,8 @@ If a given button has no ID, it will appear as "" in this array.
 =cut
 
 sub get_all_buttons {
-	my $self = shift;
-	return $self->get_string_array("getAllButtons", @_);
+    my $self = shift;
+    return $self->get_string_array("getAllButtons", @_);
 }
 
 
@@ -1179,8 +1307,8 @@ If a given link has no ID, it will appear as "" in this array.
 =cut
 
 sub get_all_links {
-	my $self = shift;
-	return $self->get_string_array("getAllLinks", @_);
+    my $self = shift;
+    return $self->get_string_array("getAllLinks", @_);
 }
 
 
@@ -1195,8 +1323,57 @@ If a given field has no ID, it will appear as "" in this array.
 =cut
 
 sub get_all_fields {
-	my $self = shift;
-	return $self->get_string_array("getAllFields", @_);
+    my $self = shift;
+    return $self->get_string_array("getAllFields", @_);
+}
+
+
+=item $sel-E<gt>get_html_source()
+
+Returns the entire HTML source between the opening and
+closing "html" tags.
+
+
+=cut
+
+sub get_html_source {
+    my $self = shift;
+    return $self->get_string("getHtmlSource", @_);
+}
+
+
+=item $sel-E<gt>set_cursor_position($locator, $position)
+
+Moves the text cursor to the specified position in the given input element or textarea.
+This method will fail if the specified element isn't an input element or textarea.
+
+$locator is an element locator pointing to an input element or textarea.  
+$position is the numerical position of the cursor in the field; position should be 0 to move the position to the beginning of the field.  You can also set the cursor to -1 to move it to the end of the field..  
+
+=cut
+
+sub set_cursor_position {
+    my $self = shift;
+    $self->do_command("setCursorPosition", @_);
+}
+
+
+=item $sel-E<gt>get_cursor_position($locator)
+
+Retrieves the text cursor position in the given input element or textarea; beware, this may not work perfectly on all browsers.
+
+Specifically, if the cursor/selection has been cleared by JavaScript, this command will tend to
+return the position of the last location of the cursor, even though the cursor is now gone from the page.  This is filed as SEL-243.
+
+This method will fail if the specified element isn't an input element or textarea, or there is no cursor in the element.
+
+$locator is an element locator pointing to an input element or textarea.  
+
+=cut
+
+sub get_cursor_position {
+    my $self = shift;
+    return $self->get_number("getCursorPosition", @_);
 }
 
 
@@ -1217,14 +1394,14 @@ $log_level_threshold is one of "debug", "info", "warn", "error", sets the thresh
 =cut
 
 sub set_context {
-	my $self = shift;
-	$self->do_command("setContext", @_);
+    my $self = shift;
+    $self->do_command("setContext", @_);
 }
 
 
 =item $sel-E<gt>get_expression($expression)
 
-Return the specified expression.
+Returns the specified expression.
 
 This is useful because of JavaScript preprocessing.
 It is used to generate commands like assertExpression and storeExpression.
@@ -1235,8 +1412,8 @@ $expression is the value to return.
 =cut
 
 sub get_expression {
-	my $self = shift;
-	return $self->get_string("getExpression", @_);
+    my $self = shift;
+    return $self->get_string("getExpression", @_);
 }
 
 
@@ -1258,8 +1435,8 @@ $timeout is a timeout in milliseconds, after which this command will return with
 =cut
 
 sub wait_for_condition {
-	my $self = shift;
-	$self->do_command("waitForCondition", @_);
+    my $self = shift;
+    $self->do_command("waitForCondition", @_);
 }
 
 
@@ -1276,8 +1453,8 @@ $timeout is a timeout in milliseconds, after which the action will return with a
 =cut
 
 sub set_timeout {
-	my $self = shift;
-	$self->do_command("setTimeout", @_);
+    my $self = shift;
+    $self->do_command("setTimeout", @_);
 }
 
 
@@ -1298,8 +1475,8 @@ $timeout is a timeout in milliseconds, after which this command will return with
 =cut
 
 sub wait_for_page_to_load {
-	my $self = shift;
-	$self->do_command("waitForPageToLoad", @_);
+    my $self = shift;
+    $self->do_command("waitForPageToLoad", @_);
 }
 
 =pod

@@ -1,5 +1,11 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+0.22 - Sat May 27 18:08:17 PDT 2006
+    - Integrate Dan Fabulitch's latest lib/WWW/Selenium.pm
+    - made Encode dependency optional
+    - Changed Test::Builder comparators - this seems to work,
+      I hope it doesn't break for other people.
+
 0.21 - Fri Apr 21 00:37:23 PDT 2006
     - fixed MANIFEST to include additional tests
     - fixed pod coverage

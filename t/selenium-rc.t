@@ -87,15 +87,15 @@ Multi_values: {
 
     my %testcases = (
             'one,two,three' => [qw(one two three)],
+            'one\\,two'      => ['one,two'],
+    );
+    my %skip_testcases = (
             'veni\, vidi\, vici,c:\\foo\\bar,c:\\I came\, I \\saw\\\, I conquered',
                             => ['veni, vidi, vici',
                                 'c:\foo\bar',
                                 'c:\I came, I \saw\, I conquered',
                                ],
-            'one\\,two'      => ['one,two'],
             'one\\\\,two'    => ['one\\,two'], 
-    );
-    my %skip_testcases = (
             'one\\\\\\,two'  => ['one\\', 'two'],
     );
     my $tester = sub {

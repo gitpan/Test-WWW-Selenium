@@ -3,7 +3,7 @@ package Test::WWW::Selenium;
 use strict;
 use base qw(WWW::Selenium);
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 =head1 NAME
 
@@ -55,7 +55,6 @@ Perl style is, of course, recommended.
 
 =cut
 
-use Test::LongString;
 use Test::More;
 use Test::Builder;
 
@@ -64,12 +63,12 @@ our $AUTOLOAD;
 my $Test = Test::Builder->new;
 
 my %comparator = (
-    is       => 'is_string',
-    isnt     => 'isnt',
-    like     => 'like_string',
-    unlike   => 'unlike_string',
-    contains => 'contains_string',
-    lacks    => 'lacks_string'
+    is       => 'is_eq',
+    isnt     => 'isnt_eq',
+    like     => 'like',
+    unlike   => 'unlike',
+    contains => 'contains',
+    lacks    => 'lacks'
 );
 
 # These commands don't require a locator
@@ -97,7 +96,7 @@ sub AUTOLOAD {
                     if $self->{verbose};
                 local $Test::Builder::Level = $Test::Builder::Level + 1;
                 no strict 'refs';
-                return &$comparator( $self->$getter, $str, $desc );
+                return $Test->$comparator( $self->$getter, $str, $desc );
             };
         }
         else {
@@ -107,7 +106,7 @@ sub AUTOLOAD {
                     if $self->{verbose};
                 local $Test::Builder::Level = $Test::Builder::Level + 1;
                 no strict 'refs';
-                return &$comparator( $self->$getter($locator), $str, $desc );
+                return $Test->$comparator( $self->$getter($locator), $str, $desc );
             };
         }
     } 
