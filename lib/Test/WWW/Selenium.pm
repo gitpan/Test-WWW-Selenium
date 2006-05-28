@@ -3,7 +3,7 @@ package Test::WWW::Selenium;
 use strict;
 use base qw(WWW::Selenium);
 
-our $VERSION = '0.22';
+our $VERSION = '0.24';
 
 =head1 NAME
 

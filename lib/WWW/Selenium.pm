@@ -24,6 +24,8 @@ use Carp qw(croak);
 use strict;
 use warnings;
 
+our $VERSION = '0.22';
+
 =head1 NAME
 
 WWW::Selenium - Perl Client for the Selenium Remote Control test tool

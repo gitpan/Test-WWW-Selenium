@@ -1,5 +1,8 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+0.24 - Sat May 27 18:08:17 PDT 2006
+    - add version to WWW::Selenium
+
 0.22 - Sat May 27 18:08:17 PDT 2006
     - Integrate Dan Fabulitch's latest lib/WWW/Selenium.pm
     - made Encode dependency optional
