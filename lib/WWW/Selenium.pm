@@ -24,7 +24,7 @@ use Carp qw(croak);
 use strict;
 use warnings;
 
-our $VERSION = '0.22';
+our $VERSION = '0.26';
 
 =head1 NAME
 
@@ -246,6 +246,7 @@ pattern.
 
 eval 'require Encode';
 my $encode_present = !$@;
+Encode->import('decode_utf8') if $encode_present;
 
 ### This part is hard-coded in the XSL
 sub new {
@@ -462,13 +463,15 @@ browser-specific prompting.
 
 =back
 
+=back
+
 =cut
 
 ### From here on, everything's auto-generated from XML
 
 
 
-=item $sel-E<gt>click($locator)
+=item * $sel-E<gt>click($locator)
 
 Clicks on a link, button, checkbox or radio button. If the click action
 causes a new page to load (like a link usually does), call
@@ -484,7 +487,7 @@ sub click {
 }
 
 
-=item $sel-E<gt>fire_event($locator, $event_name)
+=item * $sel-E<gt>fire_event($locator, $event_name)
 
 Explicitly simulate an event, to trigger the corresponding "onI<event>"
 handler.
@@ -500,7 +503,7 @@ sub fire_event {
 }
 
 
-=item $sel-E<gt>key_press($locator, $keycode)
+=item * $sel-E<gt>key_press($locator, $keycode)
 
 Simulates a user pressing and releasing a key.
 
@@ -516,7 +519,7 @@ sub key_press {
 }
 
 
-=item $sel-E<gt>key_down($locator, $keycode)
+=item * $sel-E<gt>key_down($locator, $keycode)
 
 Simulates a user pressing a key (without releasing it yet).
 
@@ -532,7 +535,7 @@ sub key_down {
 }
 
 
-=item $sel-E<gt>key_up($locator, $keycode)
+=item * $sel-E<gt>key_up($locator, $keycode)
 
 Simulates a user releasing a key.
 
@@ -548,7 +551,7 @@ sub key_up {
 }
 
 
-=item $sel-E<gt>mouse_over($locator)
+=item * $sel-E<gt>mouse_over($locator)
 
 Simulates a user hovering a mouse over the specified element.
 
@@ -562,7 +565,7 @@ sub mouse_over {
 }
 
 
-=item $sel-E<gt>mouse_down($locator)
+=item * $sel-E<gt>mouse_down($locator)
 
 Simulates a user pressing the mouse button (without releasing it yet) on
 the specified element.
@@ -577,7 +580,7 @@ sub mouse_down {
 }
 
 
-=item $sel-E<gt>type($locator, $value)
+=item * $sel-E<gt>type($locator, $value)
 
 Sets the value of an input field, as though you typed it in.
 
@@ -596,7 +599,7 @@ sub type {
 }
 
 
-=item $sel-E<gt>check($locator)
+=item * $sel-E<gt>check($locator)
 
 Check a toggle-button (checkbox/radio)
 
@@ -610,7 +613,7 @@ sub check {
 }
 
 
-=item $sel-E<gt>uncheck($locator)
+=item * $sel-E<gt>uncheck($locator)
 
 Uncheck a toggle-button (checkbox/radio)
 
@@ -624,7 +627,7 @@ sub uncheck {
 }
 
 
-=item $sel-E<gt>select($select_locator, $option_locator)
+=item * $sel-E<gt>select($select_locator, $option_locator)
 
 Select an option from a drop-down using an option locator.
 
@@ -639,7 +642,7 @@ forms of Select Option Locator.
 =over
 
 
-=item B<label>=I<labelPattern>
+=item * B<label>=I<labelPattern>
 
 matches options based on their labels, i.e. the visible text. (This
 is the default.)
@@ -654,7 +657,7 @@ is the default.)
 =back
 
 
-=item B<value>=I<valuePattern>
+=item * B<value>=I<valuePattern>
 
 matches options based on their values.
 
@@ -668,7 +671,7 @@ matches options based on their values.
 =back
 
 
-=item B<id>=I<id>
+=item * B<id>=I<id>
 
 matches options based on their ids.
 
@@ -682,7 +685,7 @@ matches options based on their ids.
 =back
 
 
-=item B<index>=I<index>
+=item * B<index>=I<index>
 
 matches an option based on its index (offset from zero).
 
@@ -714,7 +717,7 @@ sub select {
 }
 
 
-=item $sel-E<gt>add_selection($locator, $option_locator)
+=item * $sel-E<gt>add_selection($locator, $option_locator)
 
 Add a selection to the set of selected options in a multi-select element using an option locator.
 
@@ -731,7 +734,7 @@ sub add_selection {
 }
 
 
-=item $sel-E<gt>remove_selection($locator, $option_locator)
+=item * $sel-E<gt>remove_selection($locator, $option_locator)
 
 Remove a selection from the set of selected options in a multi-select element using an option locator.
 
@@ -748,7 +751,7 @@ sub remove_selection {
 }
 
 
-=item $sel-E<gt>submit($form_locator)
+=item * $sel-E<gt>submit($form_locator)
 
 Submit the specified form. This is particularly useful for forms without
 submit buttons, e.g. single-input "Search" forms.
@@ -763,7 +766,7 @@ sub submit {
 }
 
 
-=item $sel-E<gt>open($url)
+=item * $sel-E<gt>open($url)
 
 Opens an URL in the test frame. This accepts both relative and absolute
 URLs.
@@ -786,7 +789,7 @@ sub open {
 }
 
 
-=item $sel-E<gt>select_window($window_i_d)
+=item * $sel-E<gt>select_window($window_i_d)
 
 Selects a popup window; once a popup window has been selected, all
 commands go to that window. To select the main window again, use "null"
@@ -802,7 +805,7 @@ sub select_window {
 }
 
 
-=item $sel-E<gt>wait_for_pop_up($window_i_d, $timeout)
+=item * $sel-E<gt>wait_for_pop_up($window_i_d, $timeout)
 
 Waits for a popup window to appear and load up.
 
@@ -817,7 +820,7 @@ sub wait_for_pop_up {
 }
 
 
-=item $sel-E<gt>choose_cancel_on_next_confirmation()
+=item * $sel-E<gt>choose_cancel_on_next_confirmation()
 
 By default, Selenium's overridden window.confirm() function will
 return true, as if the user had manually clicked OK.  After running
@@ -833,7 +836,7 @@ sub choose_cancel_on_next_confirmation {
 }
 
 
-=item $sel-E<gt>answer_on_next_prompt($answer)
+=item * $sel-E<gt>answer_on_next_prompt($answer)
 
 Instructs Selenium to return the specified answer string in response to
 the next JavaScript prompt [window.prompt()].
@@ -848,7 +851,7 @@ sub answer_on_next_prompt {
 }
 
 
-=item $sel-E<gt>go_back()
+=item * $sel-E<gt>go_back()
 
 Simulates the user clicking the "back" button on their browser.
 
@@ -861,7 +864,7 @@ sub go_back {
 }
 
 
-=item $sel-E<gt>refresh()
+=item * $sel-E<gt>refresh()
 
 Simulates the user clicking the "Refresh" button on their browser.
 
@@ -874,7 +877,7 @@ sub refresh {
 }
 
 
-=item $sel-E<gt>close()
+=item * $sel-E<gt>close()
 
 Simulates the user clicking the "close" button in the titlebar of a popup
 window or tab.
@@ -888,7 +891,7 @@ sub close {
 }
 
 
-=item $sel-E<gt>is_alert_present()
+=item * $sel-E<gt>is_alert_present()
 
 Has an alert occurred?
 
@@ -906,7 +909,7 @@ sub is_alert_present {
 }
 
 
-=item $sel-E<gt>is_prompt_present()
+=item * $sel-E<gt>is_prompt_present()
 
 Has a prompt occurred?
 
@@ -924,7 +927,7 @@ sub is_prompt_present {
 }
 
 
-=item $sel-E<gt>is_confirmation_present()
+=item * $sel-E<gt>is_confirmation_present()
 
 Has confirm() been called?
 
@@ -942,7 +945,7 @@ sub is_confirmation_present {
 }
 
 
-=item $sel-E<gt>get_alert()
+=item * $sel-E<gt>get_alert()
 
 Retrieves the message of a JavaScript alert generated during the previous action, or fail if there were no alerts.
 
@@ -965,7 +968,7 @@ sub get_alert {
 }
 
 
-=item $sel-E<gt>get_confirmation()
+=item * $sel-E<gt>get_confirmation()
 
 Retrieves the message of a JavaScript confirmation dialog generated during
 the previous action.
@@ -997,7 +1000,7 @@ sub get_confirmation {
 }
 
 
-=item $sel-E<gt>get_prompt()
+=item * $sel-E<gt>get_prompt()
 
 Retrieves the message of a JavaScript question prompt dialog generated during
 the previous action.
@@ -1021,7 +1024,7 @@ sub get_prompt {
 }
 
 
-=item $sel-E<gt>get_absolute_location()
+=item * $sel-E<gt>get_absolute_location()
 
 Gets the absolute URL of the current page.
 
@@ -1034,7 +1037,7 @@ sub get_absolute_location {
 }
 
 
-=item $sel-E<gt>is_location($expected_location)
+=item * $sel-E<gt>is_location($expected_location)
 
 Verify the location of the current page ends with the expected location.
 If an URL querystring is provided, this is checked as well.
@@ -1049,7 +1052,7 @@ sub is_location {
 }
 
 
-=item $sel-E<gt>get_title()
+=item * $sel-E<gt>get_title()
 
 Gets the title of the current page.
 
@@ -1062,7 +1065,7 @@ sub get_title {
 }
 
 
-=item $sel-E<gt>get_body_text()
+=item * $sel-E<gt>get_body_text()
 
 Gets the entire text of the page.
 
@@ -1075,7 +1078,7 @@ sub get_body_text {
 }
 
 
-=item $sel-E<gt>get_value($locator)
+=item * $sel-E<gt>get_value($locator)
 
 Gets the (whitespace-trimmed) value of an input field (or anything else with a value parameter).
 For checkbox/radio elements, the value will be "on" or "off" depending on
@@ -1091,7 +1094,7 @@ sub get_value {
 }
 
 
-=item $sel-E<gt>get_text($locator)
+=item * $sel-E<gt>get_text($locator)
 
 Gets the text of an element. This works for any element that contains
 text. This command uses either the textContent (Mozilla-like browsers) or
@@ -1108,7 +1111,7 @@ sub get_text {
 }
 
 
-=item $sel-E<gt>get_eval($script)
+=item * $sel-E<gt>get_eval($script)
 
 Gets the result of evaluating the specified JavaScript snippet.  The snippet may 
 have multiple lines, but only the result of the last line will be returned.
@@ -1132,7 +1135,7 @@ sub get_eval {
 }
 
 
-=item $sel-E<gt>get_checked($locator)
+=item * $sel-E<gt>get_checked($locator)
 
 Gets whether a toggle-button (checkbox/radio) is checked.  Fails if the specified element doesn't exist or isn't a toggle-button.
 
@@ -1146,7 +1149,7 @@ sub get_checked {
 }
 
 
-=item $sel-E<gt>get_table($table_cell_address)
+=item * $sel-E<gt>get_table($table_cell_address)
 
 Gets the text from a cell of a table. The cellAddress syntax
 tableLocator.row.column, where row and column start at 0.
@@ -1161,7 +1164,7 @@ sub get_table {
 }
 
 
-=item $sel-E<gt>is_selected($locator, $option_locator)
+=item * $sel-E<gt>is_selected($locator, $option_locator)
 
 Verifies that the selected option of a drop-down satisfies the optionSpecifier.
 
@@ -1179,7 +1182,7 @@ sub is_selected {
 }
 
 
-=item $sel-E<gt>get_selected_options($locator)
+=item * $sel-E<gt>get_selected_options($locator)
 
 Gets all option labels for selected options in the specified select or multi-select element.
 
@@ -1193,7 +1196,7 @@ sub get_selected_options {
 }
 
 
-=item $sel-E<gt>get_select_options($locator)
+=item * $sel-E<gt>get_select_options($locator)
 
 Gets all option labels in the specified select drop-down.
 
@@ -1207,7 +1210,7 @@ sub get_select_options {
 }
 
 
-=item $sel-E<gt>get_attribute($attribute_locator)
+=item * $sel-E<gt>get_attribute($attribute_locator)
 
 Gets the value of an element attribute.
 
@@ -1221,7 +1224,7 @@ sub get_attribute {
 }
 
 
-=item $sel-E<gt>is_text_present($pattern)
+=item * $sel-E<gt>is_text_present($pattern)
 
 Verifies that the specified text pattern appears somewhere on the rendered page shown to the user.
 
@@ -1235,7 +1238,7 @@ sub is_text_present {
 }
 
 
-=item $sel-E<gt>is_element_present($locator)
+=item * $sel-E<gt>is_element_present($locator)
 
 Verifies that the specified element is somewhere on the page.
 
@@ -1249,7 +1252,7 @@ sub is_element_present {
 }
 
 
-=item $sel-E<gt>is_visible($locator)
+=item * $sel-E<gt>is_visible($locator)
 
 Determines if the specified element is visible. An
 element can be rendered invisible by setting the CSS "visibility"
@@ -1267,7 +1270,7 @@ sub is_visible {
 }
 
 
-=item $sel-E<gt>is_editable($locator)
+=item * $sel-E<gt>is_editable($locator)
 
 Determines whether the specified input element is editable, ie hasn't been disabled.
 This method will fail if the specified element isn't an input element.
@@ -1282,7 +1285,7 @@ sub is_editable {
 }
 
 
-=item $sel-E<gt>get_all_buttons()
+=item * $sel-E<gt>get_all_buttons()
 
 Returns the IDs of all buttons on the page.
 
@@ -1298,7 +1301,7 @@ sub get_all_buttons {
 }
 
 
-=item $sel-E<gt>get_all_links()
+=item * $sel-E<gt>get_all_links()
 
 Returns the IDs of all links on the page.
 
@@ -1314,7 +1317,7 @@ sub get_all_links {
 }
 
 
-=item $sel-E<gt>get_all_fields()
+=item * $sel-E<gt>get_all_fields()
 
 Returns the IDs of all input fields on the page.
 
@@ -1330,7 +1333,7 @@ sub get_all_fields {
 }
 
 
-=item $sel-E<gt>get_html_source()
+=item * $sel-E<gt>get_html_source()
 
 Returns the entire HTML source between the opening and
 closing "html" tags.
@@ -1344,7 +1347,7 @@ sub get_html_source {
 }
 
 
-=item $sel-E<gt>set_cursor_position($locator, $position)
+=item * $sel-E<gt>set_cursor_position($locator, $position)
 
 Moves the text cursor to the specified position in the given input element or textarea.
 This method will fail if the specified element isn't an input element or textarea.
@@ -1360,7 +1363,7 @@ sub set_cursor_position {
 }
 
 
-=item $sel-E<gt>get_cursor_position($locator)
+=item * $sel-E<gt>get_cursor_position($locator)
 
 Retrieves the text cursor position in the given input element or textarea; beware, this may not work perfectly on all browsers.
 
@@ -1379,7 +1382,7 @@ sub get_cursor_position {
 }
 
 
-=item $sel-E<gt>set_context($context, $log_level_threshold)
+=item * $sel-E<gt>set_context($context, $log_level_threshold)
 
 Writes a message to the status bar and adds a note to the browser-side
 log.
@@ -1401,7 +1404,7 @@ sub set_context {
 }
 
 
-=item $sel-E<gt>get_expression($expression)
+=item * $sel-E<gt>get_expression($expression)
 
 Returns the specified expression.
 
@@ -1419,7 +1422,7 @@ sub get_expression {
 }
 
 
-=item $sel-E<gt>wait_for_condition($script, $timeout)
+=item * $sel-E<gt>wait_for_condition($script, $timeout)
 
 Runs the specified JavaScript snippet repeatedly until it evaluates to "true".
 The snippet may have multiple lines, but only the result of the last line
@@ -1442,7 +1445,7 @@ sub wait_for_condition {
 }
 
 
-=item $sel-E<gt>set_timeout($timeout)
+=item * $sel-E<gt>set_timeout($timeout)
 
 Specifies the amount of time that Selenium will wait for actions to complete.
 
@@ -1460,7 +1463,7 @@ sub set_timeout {
 }
 
 
-=item $sel-E<gt>wait_for_page_to_load($timeout)
+=item * $sel-E<gt>wait_for_page_to_load($timeout)
 
 Waits for a new page to load.
 
@@ -1520,4 +1523,5 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
 

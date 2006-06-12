@@ -3,7 +3,7 @@ package Test::WWW::Selenium;
 use strict;
 use base qw(WWW::Selenium);
 
-our $VERSION = '0.24';
+our $VERSION = '1.00';
 
 =head1 NAME
 
@@ -48,7 +48,7 @@ methods (<getter>_is, <getter>_isnt, <getter>_like, <getter>_unlike,
 <getter>_contains, <getter>_lacks) to check the value of the
 attribute.
 
-You can use bot Java-style (openOk, titleIs, titleLacks) and
+You can use both Java-style (openOk, titleIs, titleLacks) and
 Perl-style (open_ok, title_is, title_lacks) in method names.
 
 Perl style is, of course, recommended.

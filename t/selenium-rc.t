@@ -103,7 +103,7 @@ Multi_values: {
         for my $k (keys %$tests) {
             $ua->{res} = HTTP::Response->new(content => "OK,$k");
             my $fields = [$sel->get_all_fields];
-            is_deeply $fields, $testcases{$k}, "parsing $k";
+            is_deeply $fields, $tests->{$k}, "parsing $k";
         }
     };
     $tester->(\%testcases);
