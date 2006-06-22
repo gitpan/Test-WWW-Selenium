@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More tests => 13;
+use Test::Exception;
 
 BEGIN {
     use lib 't/lib'; # use mock libraries
@@ -43,3 +44,10 @@ no_locatior: {
     ok 1;
 }
 
+Non_existant_command: {
+    $ua->{res} = HTTP::Response->new(content => 'OK,SESSION_ID');
+    my $sel = Test::WWW::Selenium->new(browser_url => 'http://foo.com');
+    isa_ok $sel, 'Test::WWW::Selenium';
+    $ua->{res} = HTTP::Response->new(content => 'OK');
+    throws_ok { $sel->drink_coffee_ok } qr/drink_coffee isn't a valid/;
+}

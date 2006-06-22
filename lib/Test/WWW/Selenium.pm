@@ -2,8 +2,9 @@ package Test::WWW::Selenium;
 
 use strict;
 use base qw(WWW::Selenium);
+use Carp qw(croak);
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 =head1 NAME
 
@@ -25,11 +26,11 @@ convenient testing functions.
                                       );
 
     # use special test wrappers around WWW::Selenium commands:
-    $sel->open_ok "http://www.google.com";
-    $sel->type_ok "q", "hello world";
-    $sel->click_ok "btnG";
-    $sel->wait_for_page_to_load 5000;
-    $sel->title_like, qr/Google Search/;
+    $sel->open_ok("http://www.google.com");
+    $sel->type_ok( "q", "hello world");
+    $sel->click_ok("btnG");
+    $sel->wait_for_page_to_load(5000);
+    $sel->title_like(qr/Google Search/);
                                         
 =head1 REQUIREMENTS
 
@@ -131,6 +132,7 @@ sub AUTOLOAD {
         goto &$AUTOLOAD;
     } 
     else {
+        croak("$name isn't a valid command!");
         # pass through to WWW::Selenium
         $WWW::Selenium::AUTOLOAD = $AUTOLOAD;
         goto &WWW::Selenium::AUTOLOAD;
