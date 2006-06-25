@@ -1,5 +1,13 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+1.02 - Sat Jun 24 17:25:35 PDT 2006
+ - Added unit tests for all auto-generated functions
+ - fixed bugs where line numbers and file info wasn't reported
+ - fixed bug where test description was lost
+ - added get_location method to return relative location
+ - removed references to contains and lacks functions
+ - failed action_ok() doesn't die anymore, the test just fails
+
 1.01 - Thu Jun 22 13:57:33 PDT 2006
  - No longer call WWW::Selenium::AUTOLOAD if method can't be 
    found (rt bug #20042)

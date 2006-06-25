@@ -7,7 +7,7 @@ name            'Test-WWW-Selenium';
 author          'Luke Closs <test-www-selenium@awesnob.com>';
 build_requires  'Test::More'        => '0.42';
 build_requires  'Test::Exception'   => 0;
-recommends      'Encode' => 0;
+build_requires  'Test::Pod'   => 0;
 license         'perl';
 
 # Auto-install all dependencies from CPAN
