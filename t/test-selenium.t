@@ -49,7 +49,7 @@ Comparators: {
     # run these tests twice, the first time will create the function,
     # the second time will use the auto-loaded function
   for(1 .. 2) {
-    local $ua->{res} = HTTP::Response->new(content => 'OK,SESSION_ID');
+    $ua->{res} = HTTP::Response->new(content => 'OK,SESSION_ID');
     my $sel = Test::WWW::Selenium->new(browser_url => 'http://foo.com');
     is_pass: {
         local $ua->{res} = HTTP::Response->new(content => 'OK,foo');
@@ -62,7 +62,7 @@ Comparators: {
         test_out('not ok 1 - bar');
         test_fail(+1);
         $sel->text_is('id', 'foo', 'bar');
-        test_test('is fail');
+        test_test(skip_err => 1, title => 'is fail');
     }
     isnt_pass: {
         local $ua->{res} = HTTP::Response->new(content => 'OK,baz');
@@ -75,7 +75,7 @@ Comparators: {
         test_out('not ok 1 - bar');
         test_fail(+1);
         $sel->text_isnt('id', 'foo', 'bar');
-        test_test('isnt fail');
+        test_test(skip_err => 1, title => 'isnt fail');
     }
     like_pass: {
         local $ua->{res} = HTTP::Response->new(content => 'OK,foo');
@@ -88,7 +88,7 @@ Comparators: {
         test_out('not ok 1 - bar');
         test_fail(+1);
         $sel->text_like('id', qr/foo/, 'bar');
-        test_test('like fail');
+        test_test(skip_err => 1, title => 'like fail');
     }
     unlike_pass: {
         local $ua->{res} = HTTP::Response->new(content => 'OK,baz');
@@ -101,7 +101,7 @@ Comparators: {
         test_out('not ok 1 - bar');
         test_fail(+1);
         $sel->text_unlike('id', qr/foo/, 'bar');
-        test_test('unlike fail');
+        test_test(skip_err => 1, title => 'unlike fail');
     }
     # for $sel DESTROY
     $ua->{res} = HTTP::Response->new(content => 'OK');
@@ -124,13 +124,14 @@ Commands: {
         test_err("# Failed to click");
         test_fail(+1);
         $sel->click_ok('id', 'bar');
-        test_test('click fail');
+        test_test(skip_err => 1, title => 'click fail');
     }
     # for $sel DESTROY
     $ua->{res} = HTTP::Response->new(content => 'OK');
 }
 
 no_locatior: { 
+    local $ua->{res} = HTTP::Response->new(content => 'OK,SESSION_ID');
     for my $getter (qw(alert prompt absolute_location title)) {
         local $ua->{res} = HTTP::Response->new(content => 'OK,SESSION_ID');
         my $sel = Test::WWW::Selenium->new(browser_url => 'http://foo.com');
@@ -146,7 +147,7 @@ no_locatior: {
             test_out('not ok 1 - bar');
             test_fail(+1);
             $sel->$method('foo', 'bar');
-            test_test('is fail');
+            test_test(skip_err => 1, title => 'is fail');
         }
         # for $sel DESTROY
         $ua->{res} = HTTP::Response->new(content => 'OK');
@@ -188,7 +189,7 @@ Relative_location: {
         test_out('not ok 1 - bar');
         test_fail(+1);
         $sel->location_is('foo', 'bar');
-        test_test('is fail');
+        test_test(skip_err => 1, title => 'is fail');
     }
     # for $sel DESTROY
     $ua->{res} = HTTP::Response->new(content => 'OK');
