@@ -3,6 +3,6 @@
 - WWW::Selenium
   - check that browser_url is sane
 
-- have Test::WWW::Selenium->new launch selenium-rc.jar
+- have Test::WWW::Selenium->new launch selenium-rc.jar if available
 
-- test that synopsis examples really work
+- fix google example to work in non-us countries

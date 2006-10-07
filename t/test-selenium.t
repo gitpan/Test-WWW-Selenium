@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Exception;
-use Test::Builder::Tester tests => 41;
+use Test::Builder::Tester tests => 44;
 Test::Builder::Tester::color(1);
 
 BEGIN {
@@ -28,7 +28,7 @@ Good_usage: {
 
     Test_page_title: {
         local $ua->{res} = HTTP::Response->new(content => 'OK,Some Title');
-        test_out('ok 1');
+        test_out("ok 1 - get_title, 'Some Title'");
         $sel->title_is('Some Title');
         test_test('title_is passes');
         is $ua->{req}, 'http://localhost:4444/selenium-server/driver/'
@@ -113,13 +113,13 @@ Commands: {
     my $sel = Test::WWW::Selenium->new(browser_url => 'http://foo.com');
     click_pass: {
         local $ua->{res} = HTTP::Response->new(content => 'OK');
-        test_out('ok 1 - bar');
+        test_out('ok 1 - click, id, bar');
         $sel->click_ok('id', 'bar');
         test_test('click pass');
     }
     click_fail: {
         local $ua->{res} = HTTP::Response->new(content => 'Failed to click');
-        test_out('not ok 1 - bar');
+        test_out('not ok 1 - click, id, bar');
         test_err("# Error requesting http://localhost:4444/selenium-server/driver/?cmd=click&1=id&2=bar&sessionId=SESSION_ID:");
         test_err("# Failed to click");
         test_fail(+1);
@@ -159,7 +159,7 @@ Non_existant_command: {
     my $sel = Test::WWW::Selenium->new(browser_url => 'http://foo.com');
     isa_ok $sel, 'Test::WWW::Selenium';
     $ua->{res} = HTTP::Response->new(content => 'OK');
-    throws_ok { $sel->drink_coffee_ok } qr/drink_coffee isn't a valid/;
+    throws_ok { $sel->drink_coffee_ok } qr/Can't locate object method/;
     # for $sel DESTROY
     $ua->{res} = HTTP::Response->new(content => 'OK');
 }
@@ -195,3 +195,31 @@ Relative_location: {
     $ua->{res} = HTTP::Response->new(content => 'OK');
 }
 
+Default_test_names: {
+    Default_names_off: {
+        local $ua->{res} = HTTP::Response->new(content => 'OK,SESSION_ID');
+        my $sel = Test::WWW::Selenium->new(browser_url => 'http://foo.com', 
+                                           default_names => 0);
+        local $ua->{res} = HTTP::Response->new(content => 'OK');
+        test_out('ok 1');
+        $sel->click_ok('id', 'bar');
+        test_test('default names off');
+    }
+    Test_name_provided: {
+        local $ua->{res} = HTTP::Response->new(content => 'OK,SESSION_ID');
+        my $sel = Test::WWW::Selenium->new(browser_url => 'http://foo.com', 
+                                           default_names => 1);
+        local $ua->{res} = HTTP::Response->new(content => 'OK');
+        test_out('ok 1 - test name');
+        $sel->click_ok('id', 'bar', 'test name');
+        test_test('default names on with test name');
+    }
+    No_test_name_provided: {
+        local $ua->{res} = HTTP::Response->new(content => 'OK,SESSION_ID');
+        my $sel = Test::WWW::Selenium->new(browser_url => 'http://foo.com');
+        local $ua->{res} = HTTP::Response->new(content => 'OK');
+        test_out('ok 1 - click, id, bar');
+        $sel->click_ok('id', 'bar');
+        test_test('default names on with test name');
+    }
+}

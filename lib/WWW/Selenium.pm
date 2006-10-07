@@ -1,4 +1,3 @@
-
 # Copyright 2006 ThoughtWorks, Inc
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +23,7 @@ use Carp qw(croak);
 use strict;
 use warnings;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 =head1 NAME
 
@@ -35,16 +34,16 @@ WWW::Selenium - Perl Client for the Selenium Remote Control test tool
     use WWW::Selenium;
     
     my $sel = WWW::Selenium->new( host => "localhost", 
-                                      port => 4444, 
-                                      browser => "*iexplore", 
-                                      browser_url => "http://www.google.com",
-                                    );
+                                  port => 4444, 
+                                  browser => "*iexplore", 
+                                  browser_url => "http://www.google.com",
+                                );
     
     $sel->start;
-    $sel->open "http://www.google.com";
-    $sel->type "q", "hello world";
-    $sel->click "btnG";
-    $sel->wait_for_page_to_load 5000;
+    $sel->open("http://www.google.com");
+    $sel->type("q", "hello world");
+    $sel->click("btnG");
+    $sel->wait_for_page_to_load(5000);
     print $sel->get_title;
     $sel->stop;
 
@@ -78,7 +77,9 @@ the Selenium Server.  (The Selenium Server is a Java application.)
 
 Element Locators tell Selenium which HTML element a command refers to.
 The format of a locator is:
+
 I<locatorType>B<=>I<argument>
+
 We support the following strategies for locating elements:
 
 
@@ -200,12 +201,19 @@ strategies:
 
 Element filters can be used with a locator to refine a list of candidate elements.  They are currently used only in the 'name' element-locator.
 Filters look much like locators, ie.
-I<filterType>B<=>I<argument>Supported element-filters are:
+
+I<filterType>B<=>I<argument>
+
+Supported element-filters are:
+
 B<value=>I<valuePattern>
 
-Matches elements based on their values.  This is particularly useful for refining a list of similarly-named toggle-buttons.B<index=>I<index>
+Matches elements based on their values.  This is particularly useful for refining a list of similarly-named toggle-buttons.
+
+B<index=>I<index>
 
 Selects a single element based on its position in the list (offset from zero).
+
 =head3 String-match Patterns
 
 
