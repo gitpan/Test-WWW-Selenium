@@ -23,7 +23,7 @@ use Carp qw(croak);
 use strict;
 use warnings;
 
-our $VERSION = '0.90';
+our $VERSION = '0.91';
 
 =head1 NAME
 
@@ -75,8 +75,7 @@ the Selenium Server.  (The Selenium Server is a Java application.)
 
 =head3 Element Locators
 
-Element Locators tell Selenium which HTML element a command refers to.
-The format of a locator is:
+Element Locators tell Selenium which HTML element a command refers to.The format of a locator is:
 
 =over
 
@@ -88,25 +87,27 @@ We support the following strategies for locating elements:
 
 =over
 
-=item B<identifier>=I<id>
+=item *
 
-Select the element with the specified @id attribute. If no match is
-found, select the first element whose @name attribute is I<id>.
-(This is normally the default; see below.)
+B<identifier>=I<id>: Select the element with the specified @id attribute. If no match isfound, select the first element whose @name attribute is I<id>.(This is normally the default; see below.)
 
-=item B<id>=I<id>
+=item *
 
-Select the element with the specified @id attribute.
+B<id>=I<id>:Select the element with the specified @id attribute.
 
-=item B<name>=I<name>
+=item *
 
-Select the first element with the specified @name attribute.
+B<name>=I<name>:Select the first element with the specified @name attribute.
 
 =over
 
-=item username
+=item *
 
-=item name=username
+username
+
+=item *
+
+name=username
 
 =back
 
@@ -114,57 +115,93 @@ The name may optionally be followed by one or more I<element-filters>, separated
 
 =over
 
-=item name=flavour value=chocolate
+=item *
+
+name=flavour value=chocolate
 
 =back
 
-=item B<dom>=I<javascriptExpression>
+=item *
 
-Find an element by evaluating the specified string.  This allows you to traverse the HTML Document Object
-Model using JavaScript.  Note that you must not return a value in this string; simply make it the last expression in the block.
+B<dom>=I<javascriptExpression>: Find an element by evaluating the specified string.  This allows you to traverse the HTML Document ObjectModel using JavaScript.  Note that you must not return a value in this string; simply make it the last expression in the block.
 
 =over
 
-=item dom=document.forms['myForm'].myDropdown
+=item *
 
-=item dom=document.images[56]
+dom=document.forms['myForm'].myDropdown
 
-=item dom=function foo() { return document.links[1]; }; foo();
+=item *
+
+dom=document.images[56]
+
+=item *
+
+dom=function foo() { return document.links[1]; }; foo();
 
 =back
 
-=item B<xpath>=I<xpathExpression>
+=item *
 
-Locate an element using an XPath expression.
+B<xpath>=I<xpathExpression>: Locate an element using an XPath expression.
 
 =over
 
-=item xpath=//img[@alt='The image alt text']
+=item *
 
-=item xpath=//table[@id='table1']//tr[4]/td[2]
+xpath=//img[@alt='The image alt text']
+
+=item *
+
+xpath=//table[@id='table1']//tr[4]/td[2]
+
+=item *
+
+xpath=//a[contains(@href,'#id1')]
+
+=item *
+
+xpath=//a[contains(@href,'#id1')]/@class
+
+=item *
+
+xpath=(//table[@class='stylee'])//th[text()='theHeaderText']/../td
+
+=item *
+
+xpath=//input[@name='name2' and @value='yes']
+
+=item *
+
+xpath=//*[text()="right"]
 
 =back
 
-=item B<link>=I<textPattern>
+=item *
 
-Select the link (anchor) element which contains text matching the
-specified I<pattern>.
+B<link>=I<textPattern>:Select the link (anchor) element which contains text matching thespecified I<pattern>.
 
 =over
 
-=item link=The link text
+=item *
+
+link=The link text
 
 =back
 
-=item B<css>=I<cssSelectorSyntax>
+=item *
 
-Select the element using css selectors. Please refer to http://www.w3.org/TR/REC-CSS2/selector.html (CSS2 selectors), http://www.w3.org/TR/2001/CR-css3-selectors-20011113/ (CSS3 selectors) for more information. You can also check the TestCssLocators test in the selenium test suite for an example of usage, which is included in the downloaded selenium core package.
+B<css>=I<cssSelectorSyntax>:Select the element using css selectors. Please refer to http://www.w3.org/TR/REC-CSS2/selector.html (CSS2 selectors), http://www.w3.org/TR/2001/CR-css3-selectors-20011113/ (CSS3 selectors) for more information. You can also check the TestCssLocators test in the selenium test suite for an example of usage, which is included in the downloaded selenium core package.
 
 =over
 
-=item css=a[href="#id3"]
+=item *
 
-=item css=span#firstChild + span
+css=a[href="#id3"]
+
+=item *
+
+css=span#firstChild + span
 
 =back
 
@@ -172,16 +209,21 @@ Currently the css selector locator supports all css1, css2 and css3 selectors ex
 
 =back
 
-Without an explicit locator prefix, Selenium uses the following default
-strategies:
+Without an explicit locator prefix, Selenium uses the following defaultstrategies:
 
 =over
 
-=item B<dom>, for locators starting with "document."
+=item *
 
-=item B<xpath>, for locators starting with "//"
+B<dom>, for locators starting with "document."
 
-=item B<identifier>, otherwise
+=item *
+
+B<xpath>, for locators starting with "//"
+
+=item *
+
+B<identifier>, otherwise
 
 =back
 
@@ -221,28 +263,21 @@ Various Pattern syntaxes are available for matching string values:
 
 =over
 
-=item B<glob:>I<pattern>
+=item *
 
-Match a string against a "glob" (aka "wildmat") pattern. "Glob" is a
-kind of limited regular-expression syntax typically used in command-line
-shells. In a glob pattern, "*" represents any sequence of characters, and "?"
-represents any single character. Glob patterns match against the entire
-string.
+B<glob:>I<pattern>:Match a string against a "glob" (aka "wildmat") pattern. "Glob" is akind of limited regular-expression syntax typically used in command-lineshells. In a glob pattern, "*" represents any sequence of characters, and "?"represents any single character. Glob patterns match against the entirestring.
 
-=item B<regexp:>I<regexp>
+=item *
 
-Match a string using a regular-expression. The full power of JavaScript
-regular-expressions is available.
+B<regexp:>I<regexp>:Match a string using a regular-expression. The full power of JavaScriptregular-expressions is available.
 
-=item B<exact:>I<string>
+=item *
 
-Match a string exactly, verbatim, without any of that fancy wildcard
-stuff.
+B<exact:>I<string>:Match a string exactly, verbatim, without any of that fancy wildcardstuff.
 
 =back
 
-If no pattern prefix is specified, Selenium assumes that it's a "glob"
-pattern.
+If no pattern prefix is specified, Selenium assumes that it's a "glob"pattern.
 
 =cut
 
@@ -357,6 +392,7 @@ sub new {
 
 sub start {
     my $self = shift;
+    return if $self->{session_id};
     $self->{session_id} = $self->get_string("getNewBrowserSession", 
                                             $self->{browser_start_command}, 
                                             $self->{browser_url});
@@ -364,6 +400,7 @@ sub start {
 
 sub stop {
     my $self = shift;
+    return unless defined $self->{session_id};
     $self->do_command("testComplete");
     $self->{session_id} = undef;
 }
@@ -490,9 +527,7 @@ sub get_boolean_array {
 
 =item $sel-E<gt>click($locator)
 
-Clicks on a link, button, checkbox or radio button. If the click action
-causes a new page to load (like a link usually does), call
-waitForPageToLoad.
+Clicks on a link, button, checkbox or radio button. If the click actioncauses a new page to load (like a link usually does), callwaitForPageToLoad.
 
 =over
 
@@ -509,9 +544,7 @@ sub click {
 
 =item $sel-E<gt>double_click($locator)
 
-Double clicks on a link, button, checkbox or radio button. If the double click action
-causes a new page to load (like a link usually does), call
-waitForPageToLoad.
+Double clicks on a link, button, checkbox or radio button. If the double click actioncauses a new page to load (like a link usually does), callwaitForPageToLoad.
 
 =over
 
@@ -528,9 +561,7 @@ sub double_click {
 
 =item $sel-E<gt>click_at($locator, $coord_string)
 
-Clicks on a link, button, checkbox or radio button. If the click action
-causes a new page to load (like a link usually does), call
-waitForPageToLoad.
+Clicks on a link, button, checkbox or radio button. If the click actioncauses a new page to load (like a link usually does), callwaitForPageToLoad.
 
 =over
 
@@ -549,9 +580,7 @@ sub click_at {
 
 =item $sel-E<gt>double_click_at($locator, $coord_string)
 
-Doubleclicks on a link, button, checkbox or radio button. If the action
-causes a new page to load (like a link usually does), call
-waitForPageToLoad.
+Doubleclicks on a link, button, checkbox or radio button. If the actioncauses a new page to load (like a link usually does), callwaitForPageToLoad.
 
 =over
 
@@ -570,8 +599,7 @@ sub double_click_at {
 
 =item $sel-E<gt>fire_event($locator, $event_name)
 
-Explicitly simulate an event, to trigger the corresponding "onI<event>"
-handler.
+Explicitly simulate an event, to trigger the corresponding "onI<event>"handler.
 
 =over
 
@@ -769,8 +797,7 @@ sub mouse_out {
 
 =item $sel-E<gt>mouse_down($locator)
 
-Simulates a user pressing the mouse button (without releasing it yet) on
-the specified element.
+Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
 
 =over
 
@@ -787,8 +814,7 @@ sub mouse_down {
 
 =item $sel-E<gt>mouse_down_at($locator, $coord_string)
 
-Simulates a user pressing the mouse button (without releasing it yet) on
-the specified element.
+Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
 
 =over
 
@@ -807,8 +833,7 @@ sub mouse_down_at {
 
 =item $sel-E<gt>mouse_up($locator)
 
-Simulates a user pressing the mouse button (without releasing it yet) on
-the specified element.
+Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
 
 =over
 
@@ -825,8 +850,7 @@ sub mouse_up {
 
 =item $sel-E<gt>mouse_up_at($locator, $coord_string)
 
-Simulates a user pressing the mouse button (without releasing it yet) on
-the specified element.
+Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
 
 =over
 
@@ -845,8 +869,7 @@ sub mouse_up_at {
 
 =item $sel-E<gt>mouse_move($locator)
 
-Simulates a user pressing the mouse button (without releasing it yet) on
-the specified element.
+Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
 
 =over
 
@@ -863,8 +886,7 @@ sub mouse_move {
 
 =item $sel-E<gt>mouse_move_at($locator, $coord_string)
 
-Simulates a user pressing the mouse button (without releasing it yet) on
-the specified element.
+Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
 
 =over
 
@@ -884,9 +906,7 @@ sub mouse_move_at {
 =item $sel-E<gt>type($locator, $value)
 
 Sets the value of an input field, as though you typed it in.
-
-Can also be used to set the value of combo boxes, check boxes, etc. In these cases,
-value should be the value of the option selected, not the visible text.
+Can also be used to set the value of combo boxes, check boxes, etc. In these cases,value should be the value of the option selected, not the visible text.
 
 =over
 
@@ -903,10 +923,33 @@ sub type {
     $self->do_command("type", @_);
 }
 
+=item $sel-E<gt>type_keys($locator, $value)
+
+Simulates keystroke events on the specified element, as though you typed the value key-by-key.
+This is a convenience method for calling keyDown, keyUp, keyPress for every character in the specified string;this is useful for dynamic UI widgets (like auto-completing combo boxes) that require explicit key events.
+
+Unlike the simple "type" command, which forces the specified value into the page directly, this commandmay or may not have any visible effect, even in cases where typing keys would normally have a visible effect.For example, if you use "typeKeys" on a form element, you may or may not see the results of what you typed inthe field.
+
+In some cases, you may need to use the simple "type" command to set the value of the field and then the "typeKeys" command tosend the keystroke events corresponding to what you just typed.
+
+=over
+
+$locator is an element locator
+
+$value is the value to type
+
+=back
+
+=cut
+
+sub type_keys {
+    my $self = shift;
+    $self->do_command("typeKeys", @_);
+}
+
 =item $sel-E<gt>set_speed($value)
 
-Set execution speed (i.e., set the millisecond length of a delay which will follow each selenium operation).  By default, there is no such delay, i.e.,
-the delay is 0 milliseconds.
+Set execution speed (i.e., set the millisecond length of a delay which will follow each selenium operation).  By default, there is no such delay, i.e.,the delay is 0 milliseconds.
 
 =over
 
@@ -923,10 +966,7 @@ sub set_speed {
 
 =item $sel-E<gt>get_speed()
 
-Get execution speed (i.e., get the millisecond length of the delay following each selenium operation).  By default, there is no such delay, i.e.,
-the delay is 0 milliseconds.
-
-See also setSpeed.
+Get execution speed (i.e., get the millisecond length of the delay following each selenium operation).  By default, there is no such delay, i.e.,the delay is 0 milliseconds.See also setSpeed.
 
 =cut
 
@@ -972,50 +1012,57 @@ sub uncheck {
 =item $sel-E<gt>select($select_locator, $option_locator)
 
 Select an option from a drop-down using an option locator.
-
-Option locators provide different ways of specifying options of an HTML
-Select element (e.g. for selecting a specific option, or for asserting
-that the selected option satisfies a specification). There are several
-forms of Select Option Locator.
-
-=item B<label>=I<labelPattern>
-
-matches options based on their labels, i.e. the visible text. (This
-is the default.)
+Option locators provide different ways of specifying options of an HTMLSelect element (e.g. for selecting a specific option, or for assertingthat the selected option satisfies a specification). There are severalforms of Select Option Locator.
 
 =over
 
-=item label=regexp:^[Oo]ther
+=item *
+
+B<label>=I<labelPattern>:matches options based on their labels, i.e. the visible text. (Thisis the default.)
+
+=over
+
+=item *
+
+label=regexp:^[Oo]ther
 
 =back
 
-=item B<value>=I<valuePattern>
+=item *
 
-matches options based on their values.
+B<value>=I<valuePattern>:matches options based on their values.
 
 =over
 
-=item value=other
+=item *
+
+value=other
 
 =back
 
-=item B<id>=I<id>
+=item *
 
-matches options based on their ids.
+B<id>=I<id>:matches options based on their ids.
 
 =over
 
-=item id=option1
+=item *
+
+id=option1
 
 =back
 
-=item B<index>=I<index>
+=item *
 
-matches an option based on its index (offset from zero).
+B<index>=I<index>:matches an option based on its index (offset from zero).
 
 =over
 
-=item index=2
+=item *
+
+index=2
+
+=back
 
 =back
 
@@ -1038,9 +1085,7 @@ sub select {
 
 =item $sel-E<gt>add_selection($locator, $option_locator)
 
-Add a selection to the set of selected options in a multi-select element using an option locator.
-
-@see #doSelect for details of option locators
+Add a selection to the set of selected options in a multi-select element using an option locator.@see #doSelect for details of option locators
 
 =over
 
@@ -1059,9 +1104,7 @@ sub add_selection {
 
 =item $sel-E<gt>remove_selection($locator, $option_locator)
 
-Remove a selection from the set of selected options in a multi-select element using an option locator.
-
-@see #doSelect for details of option locators
+Remove a selection from the set of selected options in a multi-select element using an option locator.@see #doSelect for details of option locators
 
 =over
 
@@ -1078,10 +1121,26 @@ sub remove_selection {
     $self->do_command("removeSelection", @_);
 }
 
+=item $sel-E<gt>remove_all_selections($locator)
+
+Unselects all of the selected options in a multi-select element.
+
+=over
+
+$locator is an element locator identifying a multi-select box
+
+=back
+
+=cut
+
+sub remove_all_selections {
+    my $self = shift;
+    $self->do_command("removeAllSelections", @_);
+}
+
 =item $sel-E<gt>submit($form_locator)
 
-Submit the specified form. This is particularly useful for forms without
-submit buttons, e.g. single-input "Search" forms.
+Submit the specified form. This is particularly useful for forms withoutsubmit buttons, e.g. single-input "Search" forms.
 
 =over
 
@@ -1098,16 +1157,7 @@ sub submit {
 
 =item $sel-E<gt>open($url)
 
-Opens an URL in the test frame. This accepts both relative and absolute
-URLs.
-
-The "open" command waits for the page to load before proceeding,
-ie. the "AndWait" suffix is implicit.
-
-I<Note>: The URL must be on the same domain as the runner HTML
-due to security restrictions in the browser (Same Origin Policy). If you
-need to open an URL on another domain, use the Selenium Server to start a
-new browser session on that domain.
+Opens an URL in the test frame. This accepts both relative and absoluteURLs.The "open" command waits for the page to load before proceeding,ie. the "AndWait" suffix is implicit.I<Note>: The URL must be on the same domain as the runner HTMLdue to security restrictions in the browser (Same Origin Policy). If youneed to open an URL on another domain, use the Selenium Server to start anew browser session on that domain.
 
 =over
 
@@ -1127,13 +1177,8 @@ sub open {
 
 =item $sel-E<gt>open_window($url, $window_id)
 
-Opens a popup window (if a window with that ID isn't already open).
-After opening the window, you'll need to select it using the selectWindow
-command.
-
-This command can also be a useful workaround for bug SEL-339.  In some cases, Selenium will be unable to intercept a call to window.open (if the call occurs during or before the "onLoad" event, for example).
-In those cases, you can force Selenium to notice the open window's name by using the Selenium openWindow command, using
-an empty (blank) url, like this: openWindow("", "myFunnyWindow").
+Opens a popup window (if a window with that ID isn't already open).After opening the window, you'll need to select it using the selectWindowcommand.
+This command can also be a useful workaround for bug SEL-339.  In some cases, Selenium will be unable to intercept a call to window.open (if the call occurs during or before the "onLoad" event, for example).In those cases, you can force Selenium to notice the open window's name by using the Selenium openWindow command, usingan empty (blank) url, like this: openWindow("", "myFunnyWindow").
 
 =over
 
@@ -1152,30 +1197,20 @@ sub open_window {
 
 =item $sel-E<gt>select_window($window_id)
 
-Selects a popup window; once a popup window has been selected, all
-commands go to that window. To select the main window again, use null
-as the target.
-
+Selects a popup window; once a popup window has been selected, allcommands go to that window. To select the main window again, use nullas the target.
 Selenium has several strategies for finding the window object referred to by the "windowID" parameter.
 
 1.) if windowID is null, then it is assumed the user is referring to the original window instantiated by the browser).
 
-2.) if the value of the "windowID" parameter is a JavaScript variable name in the current application window, then it is assumed
-that this variable contains the return value from a call to the JavaScript window.open() method.
+2.) if the value of the "windowID" parameter is a JavaScript variable name in the current application window, then it is assumedthat this variable contains the return value from a call to the JavaScript window.open() method.
 
-3.) Otherwise, selenium looks in a hash it maintains that maps string names to window objects.  Each of these string 
-names matches the second parameter "windowName" past to the JavaScript method  window.open(url, windowName, windowFeatures, replaceFlag)
-(which selenium intercepts).
+3.) Otherwise, selenium looks in a hash it maintains that maps string names to window objects.  Each of these string names matches the second parameter "windowName" past to the JavaScript method  window.open(url, windowName, windowFeatures, replaceFlag)(which selenium intercepts).
 
-If you're having trouble figuring out what is the name of a window that you want to manipulate, look at the selenium log messages
-which identify the names of windows created via window.open (and therefore intercepted by selenium).  You will see messages
-like the following for each window as it is opened:
+If you're having trouble figuring out what is the name of a window that you want to manipulate, look at the selenium log messageswhich identify the names of windows created via window.open (and therefore intercepted by selenium).  You will see messageslike the following for each window as it is opened:
 
 C<debug: window.open call intercepted; window ID (which you can use with selectWindow()) is "myNewWindow">
 
-In some cases, Selenium will be unable to intercept a call to window.open (if the call occurs during or before the "onLoad" event, for example).
-(This is bug SEL-339.)  In those cases, you can force Selenium to notice the open window's name by using the Selenium openWindow command, using
-an empty (blank) url, like this: openWindow("", "myFunnyWindow").
+In some cases, Selenium will be unable to intercept a call to window.open (if the call occurs during or before the "onLoad" event, for example).(This is bug SEL-339.)  In those cases, you can force Selenium to notice the open window's name by using the Selenium openWindow command, usingan empty (blank) url, like this: openWindow("", "myFunnyWindow").
 
 =over
 
@@ -1192,12 +1227,8 @@ sub select_window {
 
 =item $sel-E<gt>select_frame($locator)
 
-Selects a frame within the current window.  (You may invoke this command
-multiple times to select nested frames.)  To select the parent frame, use
-"relative=parent" as a locator; to select the top frame, use "relative=top".
-
-You may also use a DOM expression to identify the frame you want directly,
-like this: C<dom=frames["main"].frames["subframe"]>
+Selects a frame within the current window.  (You may invoke this commandmultiple times to select nested frames.)  To select the parent frame, use"relative=parent" as a locator; to select the top frame, use "relative=top".
+You may also use a DOM expression to identify the frame you want directly,like this: C<dom=frames["main"].frames["subframe"]>
 
 =over
 
@@ -1215,15 +1246,9 @@ sub select_frame {
 =item $sel-E<gt>get_log_messages()
 
 Return the contents of the log.
+This is a placeholder intended to make the code generator make this APIavailable to clients.  The selenium server will intercept this call, however,and return its recordkeeping of log messages since the last call to this API.Thus this code in JavaScript will never be called.
 
-This is a placeholder intended to make the code generator make this API
-available to clients.  The selenium server will intercept this call, however,
-and return its recordkeeping of log messages since the last call to this API.
-Thus this code in JavaScript will never be called.
-
-The reason I opted for a servercentric solution is to be able to support
-multiple frames served from different domains, which would break a
-centralized JavaScript logging mechanism under some conditions.
+The reason I opted for a servercentric solution is to be able to supportmultiple frames served from different domains, which would break acentralized JavaScript logging mechanism under some conditions.
 
 =over
 
@@ -1241,12 +1266,7 @@ sub get_log_messages {
 =item $sel-E<gt>get_whether_this_frame_match_frame_expression($current_frame_string, $target)
 
 Determine whether current/locator identify the frame containing this running code.
-
-This is useful in proxy injection mode, where this code runs in every
-browser frame and window, and sometimes the selenium server needs to identify
-the "current" frame.  In this case, when the test calls selectFrame, this
-routine is called for each frame to figure out which one has been selected.
-The selected frame will return true, while all others will return false.
+This is useful in proxy injection mode, where this code runs in everybrowser frame and window, and sometimes the selenium server needs to identifythe "current" frame.  In this case, when the test calls selectFrame, thisroutine is called for each frame to figure out which one has been selected.The selected frame will return true, while all others will return false.
 
 =over
 
@@ -1272,12 +1292,7 @@ sub get_whether_this_frame_match_frame_expression {
 =item $sel-E<gt>get_whether_this_window_match_window_expression($current_window_string, $target)
 
 Determine whether currentWindowString plus target identify the window containing this running code.
-
-This is useful in proxy injection mode, where this code runs in every
-browser frame and window, and sometimes the selenium server needs to identify
-the "current" window.  In this case, when the test calls selectWindow, this
-routine is called for each window to figure out which one has been selected.
-The selected window will return true, while all others will return false.
+This is useful in proxy injection mode, where this code runs in everybrowser frame and window, and sometimes the selenium server needs to identifythe "current" window.  In this case, when the test calls selectWindow, thisroutine is called for each window to figure out which one has been selected.The selected window will return true, while all others will return false.
 
 =over
 
@@ -1321,10 +1336,7 @@ sub wait_for_pop_up {
 
 =item $sel-E<gt>choose_cancel_on_next_confirmation()
 
-By default, Selenium's overridden window.confirm() function will
-return true, as if the user had manually clicked OK.  After running
-this command, the next call to confirm() will return false, as if
-the user had clicked Cancel.
+By default, Selenium's overridden window.confirm() function willreturn true, as if the user had manually clicked OK.  After runningthis command, the next call to confirm() will return false, as ifthe user had clicked Cancel.
 
 =cut
 
@@ -1335,8 +1347,7 @@ sub choose_cancel_on_next_confirmation {
 
 =item $sel-E<gt>answer_on_next_prompt($answer)
 
-Instructs Selenium to return the specified answer string in response to
-the next JavaScript prompt [window.prompt()].
+Instructs Selenium to return the specified answer string in response tothe next JavaScript prompt [window.prompt()].
 
 =over
 
@@ -1375,8 +1386,7 @@ sub refresh {
 
 =item $sel-E<gt>close()
 
-Simulates the user clicking the "close" button in the titlebar of a popup
-window or tab.
+Simulates the user clicking the "close" button in the titlebar of a popupwindow or tab.
 
 =cut
 
@@ -1388,7 +1398,6 @@ sub close {
 =item $sel-E<gt>is_alert_present()
 
 Has an alert occurred?
-
 This function never throws an exception
 
 =over
@@ -1407,7 +1416,6 @@ sub is_alert_present {
 =item $sel-E<gt>is_prompt_present()
 
 Has a prompt occurred?
-
 This function never throws an exception
 
 =over
@@ -1426,7 +1434,6 @@ sub is_prompt_present {
 =item $sel-E<gt>is_confirmation_present()
 
 Has confirm() been called?
-
 This function never throws an exception
 
 =over
@@ -1445,17 +1452,11 @@ sub is_confirmation_present {
 =item $sel-E<gt>get_alert()
 
 Retrieves the message of a JavaScript alert generated during the previous action, or fail if there were no alerts.
+Getting an alert has the same effect as manually clicking OK. If analert is generated but you do not get/verify it, the next Selenium actionwill fail.
 
-Getting an alert has the same effect as manually clicking OK. If an
-alert is generated but you do not get/verify it, the next Selenium action
-will fail.
+NOTE: under Selenium, JavaScript alerts will NOT pop up a visible alertdialog.
 
-NOTE: under Selenium, JavaScript alerts will NOT pop up a visible alert
-dialog.
-
-NOTE: Selenium does NOT support JavaScript alerts that are generated in a
-page's onload() event handler. In this case a visible dialog WILL be
-generated and Selenium will hang until someone manually clicks OK.
+NOTE: Selenium does NOT support JavaScript alerts that are generated in apage's onload() event handler. In this case a visible dialog WILL begenerated and Selenium will hang until someone manually clicks OK.
 
 =over
 
@@ -1472,21 +1473,12 @@ sub get_alert {
 
 =item $sel-E<gt>get_confirmation()
 
-Retrieves the message of a JavaScript confirmation dialog generated during
-the previous action.
+Retrieves the message of a JavaScript confirmation dialog generated duringthe previous action.
+By default, the confirm function will return true, having the same effectas manually clicking OK. This can be changed by prior execution of thechooseCancelOnNextConfirmation command. If an confirmation is generatedbut you do not get/verify it, the next Selenium action will fail.
 
-By default, the confirm function will return true, having the same effect
-as manually clicking OK. This can be changed by prior execution of the
-chooseCancelOnNextConfirmation command. If an confirmation is generated
-but you do not get/verify it, the next Selenium action will fail.
+NOTE: under Selenium, JavaScript confirmations will NOT pop up a visibledialog.
 
-NOTE: under Selenium, JavaScript confirmations will NOT pop up a visible
-dialog.
-
-NOTE: Selenium does NOT support JavaScript confirmations that are
-generated in a page's onload() event handler. In this case a visible
-dialog WILL be generated and Selenium will hang until you manually click
-OK.
+NOTE: Selenium does NOT support JavaScript confirmations that aregenerated in a page's onload() event handler. In this case a visibledialog WILL be generated and Selenium will hang until you manually clickOK.
 
 =over
 
@@ -1503,19 +1495,12 @@ sub get_confirmation {
 
 =item $sel-E<gt>get_prompt()
 
-Retrieves the message of a JavaScript question prompt dialog generated during
-the previous action.
+Retrieves the message of a JavaScript question prompt dialog generated duringthe previous action.
+Successful handling of the prompt requires prior execution of theanswerOnNextPrompt command. If a prompt is generated but youdo not get/verify it, the next Selenium action will fail.
 
-Successful handling of the prompt requires prior execution of the
-answerOnNextPrompt command. If a prompt is generated but you
-do not get/verify it, the next Selenium action will fail.
+NOTE: under Selenium, JavaScript prompts will NOT pop up a visibledialog.
 
-NOTE: under Selenium, JavaScript prompts will NOT pop up a visible
-dialog.
-
-NOTE: Selenium does NOT support JavaScript prompts that are generated in a
-page's onload() event handler. In this case a visible dialog WILL be
-generated and Selenium will hang until someone manually clicks OK.
+NOTE: Selenium does NOT support JavaScript prompts that are generated in apage's onload() event handler. In this case a visible dialog WILL begenerated and Selenium will hang until someone manually clicks OK.
 
 =over
 
@@ -1583,9 +1568,7 @@ sub get_body_text {
 
 =item $sel-E<gt>get_value($locator)
 
-Gets the (whitespace-trimmed) value of an input field (or anything else with a value parameter).
-For checkbox/radio elements, the value will be "on" or "off" depending on
-whether the element is checked or not.
+Gets the (whitespace-trimmed) value of an input field (or anything else with a value parameter).For checkbox/radio elements, the value will be "on" or "off" depending onwhether the element is checked or not.
 
 =over
 
@@ -1608,10 +1591,7 @@ sub get_value {
 
 =item $sel-E<gt>get_text($locator)
 
-Gets the text of an element. This works for any element that contains
-text. This command uses either the textContent (Mozilla-like browsers) or
-the innerText (IE-like browsers) of the element, which is the rendered
-text shown to the user.
+Gets the text of an element. This works for any element that containstext. This command uses either the textContent (Mozilla-like browsers) orthe innerText (IE-like browsers) of the element, which is the renderedtext shown to the user.
 
 =over
 
@@ -1632,19 +1612,29 @@ sub get_text {
     return $self->get_string("getText", @_);
 }
 
+=item $sel-E<gt>highlight($locator)
+
+Briefly changes the backgroundColor of the specified element yellow.  Useful for debugging.
+
+=over
+
+$locator is an element locator
+
+=back
+
+=cut
+
+sub highlight {
+    my $self = shift;
+    $self->do_command("highlight", @_);
+}
+
 =item $sel-E<gt>get_eval($script)
 
-Gets the result of evaluating the specified JavaScript snippet.  The snippet may
-have multiple lines, but only the result of the last line will be returned.
+Gets the result of evaluating the specified JavaScript snippet.  The snippet mayhave multiple lines, but only the result of the last line will be returned.
+Note that, by default, the snippet will run in the context of the "selenium"object itself, so C<this> will refer to the Selenium object, and C<window> willrefer to the top-level runner test window, not the window of your application.
 
-Note that, by default, the snippet will run in the context of the "selenium"
-object itself, so C<this> will refer to the Selenium object, and C<window> will
-refer to the top-level runner test window, not the window of your application.
-
-If you need a reference to the window of your application, you can refer
-to C<this.browserbot.getCurrentWindow()> and if you need to use
-a locator to refer to a single element in your application page, you can
-use C<this.page().findElement("foo")> where "foo" is your locator.
+If you need a reference to the window of your application, you can referto C<this.browserbot.getCurrentWindow()> and if you need to usea locator to refer to a single element in your application page, you canuse C<this.browserbot.findElement("foo")> where "foo" is your locator.
 
 =over
 
@@ -1690,8 +1680,7 @@ sub is_checked {
 
 =item $sel-E<gt>get_table($table_cell_address)
 
-Gets the text from a cell of a table. The cellAddress syntax
-tableLocator.row.column, where row and column start at 0.
+Gets the text from a cell of a table. The cellAddress syntaxtableLocator.row.column, where row and column start at 0.
 
 =over
 
@@ -2013,11 +2002,7 @@ sub is_element_present {
 
 =item $sel-E<gt>is_visible($locator)
 
-Determines if the specified element is visible. An
-element can be rendered invisible by setting the CSS "visibility"
-property to "hidden", or the "display" property to "none", either for the
-element itself or one if its ancestors.  This method will fail if
-the element is not present.
+Determines if the specified element is visible. Anelement can be rendered invisible by setting the CSS "visibility"property to "hidden", or the "display" property to "none", either for theelement itself or one if its ancestors.  This method will fail ifthe element is not present.
 
 =over
 
@@ -2040,8 +2025,7 @@ sub is_visible {
 
 =item $sel-E<gt>is_editable($locator)
 
-Determines whether the specified input element is editable, ie hasn't been disabled.
-This method will fail if the specified element isn't an input element.
+Determines whether the specified input element is editable, ie hasn't been disabled.This method will fail if the specified element isn't an input element.
 
 =over
 
@@ -2065,7 +2049,6 @@ sub is_editable {
 =item $sel-E<gt>get_all_buttons()
 
 Returns the IDs of all buttons on the page.
-
 If a given button has no ID, it will appear as "" in this array.
 
 =over
@@ -2084,7 +2067,6 @@ sub get_all_buttons {
 =item $sel-E<gt>get_all_links()
 
 Returns the IDs of all links on the page.
-
 If a given link has no ID, it will appear as "" in this array.
 
 =over
@@ -2103,7 +2085,6 @@ sub get_all_links {
 =item $sel-E<gt>get_all_fields()
 
 Returns the IDs of all input fields on the page.
-
 If a given field has no ID, it will appear as "" in this array.
 
 =over
@@ -2161,6 +2142,43 @@ sub dragdrop {
     $self->do_command("dragdrop", @_);
 }
 
+=item $sel-E<gt>set_mouse_speed($pixels)
+
+Configure the number of pixels between "mousemove" events during dragAndDrop commands (default=10).
+Setting this value to 0 means that we'll send a "mousemove" event to every single pixelin between the start location and the end location; that can be very slow, and maycause some browsers to force the JavaScript to timeout.
+
+If the mouse speed is greater than the distance between the two dragged objects, we'lljust send one "mousemove" at the start location and then one final one at the end location.
+
+=over
+
+$pixels is the number of pixels between "mousemove" events
+
+=back
+
+=cut
+
+sub set_mouse_speed {
+    my $self = shift;
+    $self->do_command("setMouseSpeed", @_);
+}
+
+=item $sel-E<gt>get_mouse_speed()
+
+Returns the number of pixels between "mousemove" events during dragAndDrop commands (default=10).
+
+=over
+
+Returns the number of pixels between "mousemove" events during dragAndDrop commands (default=10)
+
+=back
+
+=cut
+
+sub get_mouse_speed {
+    my $self = shift;
+    return $self->get_number("getMouseSpeed", @_);
+}
+
 =item $sel-E<gt>drag_and_drop($locator, $movements_string)
 
 Drags an element a certain distance and then drops it
@@ -2188,7 +2206,7 @@ Drags an element and drops it on another element
 
 $locator_of_object_to_be_dragged is an element to be dragged
 
-$locator_of_drag_destination_object is an element whose location (i.e., whose top left corner) will be the point where locatorOfObjectToBeDragged  is dropped
+$locator_of_drag_destination_object is an element whose location (i.e., whose center-most pixel) will be the point where locatorOfObjectToBeDragged  is dropped
 
 =back
 
@@ -2286,8 +2304,7 @@ sub get_all_window_titles {
 
 =item $sel-E<gt>get_html_source()
 
-Returns the entire HTML source between the opening and
-closing "html" tags.
+Returns the entire HTML source between the opening andclosing "html" tags.
 
 =over
 
@@ -2304,8 +2321,7 @@ sub get_html_source {
 
 =item $sel-E<gt>set_cursor_position($locator, $position)
 
-Moves the text cursor to the specified position in the given input element or textarea.
-This method will fail if the specified element isn't an input element or textarea.
+Moves the text cursor to the specified position in the given input element or textarea.This method will fail if the specified element isn't an input element or textarea.
 
 =over
 
@@ -2324,8 +2340,7 @@ sub set_cursor_position {
 
 =item $sel-E<gt>get_element_index($locator)
 
-Get the relative index of an element to its parent (starting from 0). The comment node and empty text node
-will be ignored.
+Get the relative index of an element to its parent (starting from 0). The comment node and empty text nodewill be ignored.
 
 =over
 
@@ -2348,8 +2363,7 @@ sub get_element_index {
 
 =item $sel-E<gt>is_ordered($locator1, $locator2)
 
-Check if these two elements have same parent and are ordered. Two same elements will
-not be considered ordered.
+Check if these two elements have same parent and are ordered. Two same elements willnot be considered ordered.
 
 =over
 
@@ -2467,9 +2481,7 @@ sub get_element_height {
 =item $sel-E<gt>get_cursor_position($locator)
 
 Retrieves the text cursor position in the given input element or textarea; beware, this may not work perfectly on all browsers.
-
-Specifically, if the cursor/selection has been cleared by JavaScript, this command will tend to
-return the position of the last location of the cursor, even though the cursor is now gone from the page.  This is filed as http://jira.openqa.org/browse/SEL-243 (SEL-243).
+Specifically, if the cursor/selection has been cleared by JavaScript, this command will tend toreturn the position of the last location of the cursor, even though the cursor is now gone from the page.  This is filed as http://jira.openqa.org/browse/SEL-243 (SEL-243).
 This method will fail if the specified element isn't an input element or textarea, or there is no cursor in the element.
 
 =over
@@ -2493,14 +2505,10 @@ sub get_cursor_position {
 
 =item $sel-E<gt>set_context($context, $log_level_threshold)
 
-Writes a message to the status bar and adds a note to the browser-side
-log.
+Writes a message to the status bar and adds a note to the browser-sidelog.
+If logLevelThreshold is specified, set the threshold for loggingto that level (debug, info, warn, error).
 
-If logLevelThreshold is specified, set the threshold for logging
-to that level (debug, info, warn, error).
-
-(Note that the browser-side logs will <i>not</i> be sent back to the
-server, and are invisible to the Client Driver.)
+(Note that the browser-side logs will <i>not</i> be sent back to theserver, and are invisible to the Client Driver.)
 
 =over
 
@@ -2520,9 +2528,7 @@ sub set_context {
 =item $sel-E<gt>get_expression($expression)
 
 Returns the specified expression.
-
-This is useful because of JavaScript preprocessing.
-It is used to generate commands like assertExpression and waitForExpression.
+This is useful because of JavaScript preprocessing.It is used to generate commands like assertExpression and waitForExpression.
 
 =over
 
@@ -2545,14 +2551,8 @@ sub get_expression {
 
 =item $sel-E<gt>wait_for_condition($script, $timeout)
 
-Runs the specified JavaScript snippet repeatedly until it evaluates to "true".
-The snippet may have multiple lines, but only the result of the last line
-will be considered.
-
-Note that, by default, the snippet will be run in the runner's test window, not in the window
-of your application.  To get the window of your application, you can use
-the JavaScript snippet C<selenium.browserbot.getCurrentWindow()>, and then
-run your JavaScript in there
+Runs the specified JavaScript snippet repeatedly until it evaluates to "true".The snippet may have multiple lines, but only the result of the last linewill be considered.
+Note that, by default, the snippet will be run in the runner's test window, not in the windowof your application.  To get the window of your application, you can usethe JavaScript snippet C<selenium.browserbot.getCurrentWindow()>, and thenrun your JavaScript in there
 
 =over
 
@@ -2572,9 +2572,7 @@ sub wait_for_condition {
 =item $sel-E<gt>set_timeout($timeout)
 
 Specifies the amount of time that Selenium will wait for actions to complete.
-
 Actions that require waiting include "open" and the "waitFor*" actions.
-
 The default timeout is 30 seconds.
 
 =over
@@ -2593,14 +2591,9 @@ sub set_timeout {
 =item $sel-E<gt>wait_for_page_to_load($timeout)
 
 Waits for a new page to load.
+You can use this command instead of the "AndWait" suffixes, "clickAndWait", "selectAndWait", "typeAndWait" etc.(which are only available in the JS API).
 
-You can use this command instead of the "AndWait" suffixes, "clickAndWait", "selectAndWait", "typeAndWait" etc.
-(which are only available in the JS API).
-
-Selenium constantly keeps track of new pages loading, and sets a "newPageLoaded"
-flag when it first notices a page load.  Running any other Selenium command after
-turns the flag to false.  Hence, if you want to wait for a page to load, you must
-wait immediately after a Selenium command that caused a page-load.
+Selenium constantly keeps track of new pages loading, and sets a "newPageLoaded"flag when it first notices a page load.  Running any other Selenium command afterturns the flag to false.  Hence, if you want to wait for a page to load, you mustwait immediately after a Selenium command that caused a page-load.
 
 =over
 
@@ -2634,8 +2627,7 @@ sub get_cookie {
 
 =item $sel-E<gt>create_cookie($name_value_pair, $options_string)
 
-Create a new cookie whose path and domain are same with those of current page
-under test, unless you specified a path for this cookie explicitly.
+Create a new cookie whose path and domain are same with those of current pageunder test, unless you specified a path for this cookie explicitly.
 
 =over
 
