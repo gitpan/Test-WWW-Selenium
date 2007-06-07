@@ -19,6 +19,7 @@ use LWP::UserAgent;
 use HTTP::Request;
 use URI::Escape;
 use Carp qw(croak);
+use Time::HiRes qw(sleep);
 
 use strict;
 use warnings;
@@ -408,9 +409,10 @@ sub stop {
 sub do_command {
     my ($self, $command, @args) = @_;
 
+    $self->{_page_opened} = 1 if $command eq 'open';
+
     # Check that user has called open()
     my %valid_pre_open_commands = (
-        open => 1,
         testComplete => 1,
         getNewBrowserSession => 1,
     );
@@ -522,6 +524,18 @@ sub get_boolean_array {
     return @boolarr;
 }
 
+=item $sel-E<gt>pause($timeout)
+
+Waits $timeout milliseconds (default: 1 second)
+
+=cut
+
+sub pause {
+    my ($self,$timeout) = @_;
+    $timeout = 1000  unless defined $timeout;
+    $timeout /= 1000;
+    sleep $timeout;
+}
 
 ### From here on, everything's auto-generated from XML
 
@@ -1169,7 +1183,6 @@ $url is the URL to open; may be relative or absolute
 
 sub open {
     my $self = shift;
-    $self->{_page_opened} = 1;
     $_[0] ||= '/'; # default to opening site root
 
     $self->do_command("open", @_);
@@ -1198,13 +1211,17 @@ sub open_window {
 =item $sel-E<gt>select_window($window_id)
 
 Selects a popup window; once a popup window has been selected, allcommands go to that window. To select the main window again, use nullas the target.
+Note that there is a big difference between a window's internal JavaScript "name" propertyand the "title" of a given window's document (which is normally what you actually see, as an end user,in the title bar of the window).  The "name" is normally invisible to the end-user; it's the second parameter "windowName" passed to the JavaScript method window.open(url, windowName, windowFeatures, replaceFlag)(which selenium intercepts).
+
 Selenium has several strategies for finding the window object referred to by the "windowID" parameter.
 
-1.) if windowID is null, then it is assumed the user is referring to the original window instantiated by the browser).
+1.) if windowID is null, (or the string "null") then it is assumed the user is referring to the original window instantiated by the browser).
 
 2.) if the value of the "windowID" parameter is a JavaScript variable name in the current application window, then it is assumedthat this variable contains the return value from a call to the JavaScript window.open() method.
 
-3.) Otherwise, selenium looks in a hash it maintains that maps string names to window objects.  Each of these string names matches the second parameter "windowName" past to the JavaScript method  window.open(url, windowName, windowFeatures, replaceFlag)(which selenium intercepts).
+3.) Otherwise, selenium looks in a hash it maintains that maps string names to window "names".
+
+4.) If <i>that</i> fails, we'll try looping over all of the known windows to try to find the appropriate "title".Since "title" is not necessarily unique, this may have unexpected behavior.
 
 If you're having trouble figuring out what is the name of a window that you want to manipulate, look at the selenium log messageswhich identify the names of windows created via window.open (and therefore intercepted by selenium).  You will see messageslike the following for each window as it is opened:
 
@@ -1937,7 +1954,7 @@ Gets the value of an element attribute.
 
 =over
 
-$attribute_locator is an element locator followed by an
+$attribute_locator is an element locator followed by an @ sign and then the name of the attribute, e.g. "foo@bar"
 
 =back
 
@@ -2661,6 +2678,28 @@ $path is the path property of the cookie to be deleted
 sub delete_cookie {
     my $self = shift;
     $self->do_command("deleteCookie", @_);
+}
+
+=item $sel-E<gt>wait_for_text_present($text, $timeout)
+
+Waits until $text is present in the html source
+
+=cut
+
+sub wait_for_text_present {
+    my $self = shift;
+    $self->do_command("waitForTextPresent", @_);
+}
+
+=item $sel-E<gt>wait_for_element_present($locator, $timeout)
+
+Waits until $locator is present
+
+=cut
+
+sub wait_for_element_present {
+    my $self = shift;
+    $self->do_command("waitForElementPresent", @_);
 }
 
 

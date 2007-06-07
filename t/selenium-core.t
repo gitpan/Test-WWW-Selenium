@@ -124,3 +124,5 @@ $sel->_method_exists("wait_for_page_to_load");
 $sel->_method_exists("get_cookie");
 $sel->_method_exists("create_cookie");
 $sel->_method_exists("delete_cookie");
+$sel->_method_exists("wait_for_text_present");
+$sel->_method_exists("wait_for_element_present");
