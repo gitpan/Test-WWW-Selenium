@@ -24,7 +24,7 @@ use Time::HiRes qw(sleep);
 use strict;
 use warnings;
 
-our $VERSION = '0.911';
+our $VERSION = '0.93';
 
 =head1 NAME
 
@@ -828,7 +828,7 @@ sub mouse_down {
 
 =item $sel-E<gt>mouse_down_at($locator, $coord_string)
 
-Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
+Simulates a user pressing the mouse button (without releasing it yet) atthe specified location.
 
 =over
 
@@ -847,7 +847,7 @@ sub mouse_down_at {
 
 =item $sel-E<gt>mouse_up($locator)
 
-Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
+Simulates the event that occurs when the user releases the mouse button (i.e., stopsholding the button down) on the specified element.
 
 =over
 
@@ -864,7 +864,7 @@ sub mouse_up {
 
 =item $sel-E<gt>mouse_up_at($locator, $coord_string)
 
-Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
+Simulates the event that occurs when the user releases the mouse button (i.e., stopsholding the button down) at the specified location.
 
 =over
 
@@ -1244,7 +1244,7 @@ sub select_window {
 
 =item $sel-E<gt>select_frame($locator)
 
-Selects a frame within the current window.  (You may invoke this commandmultiple times to select nested frames.)  To select the parent frame, use"relative=parent" as a locator; to select the top frame, use "relative=top".
+Selects a frame within the current window.  (You may invoke this commandmultiple times to select nested frames.)  To select the parent frame, use"relative=parent" as a locator; to select the top frame, use "relative=top".You can also select a frame by its 0-based index number; select the first frame with"index=0", or the third frame with "index=2".
 You may also use a DOM expression to identify the frame you want directly,like this: C<dom=frames["main"].frames["subframe"]>
 
 =over
@@ -1258,26 +1258,6 @@ $locator is an element locator identifying a frame or iframe
 sub select_frame {
     my $self = shift;
     $self->do_command("selectFrame", @_);
-}
-
-=item $sel-E<gt>get_log_messages()
-
-Return the contents of the log.
-This is a placeholder intended to make the code generator make this APIavailable to clients.  The selenium server will intercept this call, however,and return its recordkeeping of log messages since the last call to this API.Thus this code in JavaScript will never be called.
-
-The reason I opted for a servercentric solution is to be able to supportmultiple frames served from different domains, which would break acentralized JavaScript logging mechanism under some conditions.
-
-=over
-
-Returns all log messages seen since the last call to this API
-
-=back
-
-=cut
-
-sub get_log_messages {
-    my $self = shift;
-    return $self->get_string("getLogMessages", @_);
 }
 
 =item $sel-E<gt>get_whether_this_frame_match_frame_expression($current_frame_string, $target)
@@ -1353,13 +1333,24 @@ sub wait_for_pop_up {
 
 =item $sel-E<gt>choose_cancel_on_next_confirmation()
 
-By default, Selenium's overridden window.confirm() function willreturn true, as if the user had manually clicked OK.  After runningthis command, the next call to confirm() will return false, as ifthe user had clicked Cancel.
+By default, Selenium's overridden window.confirm() function willreturn true, as if the user had manually clicked OK; after runningthis command, the next call to confirm() will return false, as ifthe user had clicked Cancel.  Selenium will then resume using thedefault behavior for future confirmations, automatically returning true (OK) unless/until you explicitly call this command for eachconfirmation.
 
 =cut
 
 sub choose_cancel_on_next_confirmation {
     my $self = shift;
     $self->do_command("chooseCancelOnNextConfirmation", @_);
+}
+
+=item $sel-E<gt>choose_ok_on_next_confirmation()
+
+Undo the effect of calling chooseCancelOnNextConfirmation.  Notethat Selenium's overridden window.confirm() function will normally automaticallyreturn true, as if the user had manually clicked OK, so you shouldn'tneed to use this command unless for some reason you need to changeyour mind prior to the next confirmation.  After any confirmation, Selenium will resume using thedefault behavior for future confirmations, automatically returning true (OK) unless/until you explicitly call chooseCancelOnNextConfirmation for eachconfirmation.
+
+=cut
+
+sub choose_ok_on_next_confirmation {
+    my $self = shift;
+    $self->do_command("chooseOkOnNextConfirmation", @_);
 }
 
 =item $sel-E<gt>answer_on_next_prompt($answer)
@@ -1649,9 +1640,9 @@ sub highlight {
 =item $sel-E<gt>get_eval($script)
 
 Gets the result of evaluating the specified JavaScript snippet.  The snippet mayhave multiple lines, but only the result of the last line will be returned.
-Note that, by default, the snippet will run in the context of the "selenium"object itself, so C<this> will refer to the Selenium object, and C<window> willrefer to the top-level runner test window, not the window of your application.
+Note that, by default, the snippet will run in the context of the "selenium"object itself, so C<this> will refer to the Selenium object.  Use C<window> torefer to the window of your application, e.g. C<window.document.getElementById('foo')>
 
-If you need a reference to the window of your application, you can referto C<this.browserbot.getCurrentWindow()> and if you need to usea locator to refer to a single element in your application page, you canuse C<this.browserbot.findElement("foo")> where "foo" is your locator.
+If you need to usea locator to refer to a single element in your application page, you canuse C<this.browserbot.findElement("id=foo")> where "id=foo" is your locator.
 
 =over
 
@@ -2234,15 +2225,9 @@ sub drag_and_drop_to_object {
     $self->do_command("dragAndDropToObject", @_);
 }
 
-=item $sel-E<gt>window_focus($window_name)
+=item $sel-E<gt>window_focus()
 
-Gives focus to a window
-
-=over
-
-$window_name is name of the window to be given focus
-
-=back
+Gives focus to the currently selected window
 
 =cut
 
@@ -2251,15 +2236,9 @@ sub window_focus {
     $self->do_command("windowFocus", @_);
 }
 
-=item $sel-E<gt>window_maximize($window_name)
+=item $sel-E<gt>window_maximize()
 
-Resize window to take up the entire screen
-
-=over
-
-$window_name is name of the window to be enlarged
-
-=back
+Resize currently selected window to take up the entire screen
 
 =cut
 
@@ -2380,7 +2359,7 @@ sub get_element_index {
 
 =item $sel-E<gt>is_ordered($locator1, $locator2)
 
-Check if these two elements have same parent and are ordered. Two same elements willnot be considered ordered.
+Check if these two elements have same parent and are ordered siblings in the DOM. Two same elements willnot be considered ordered.
 
 =over
 
@@ -2392,7 +2371,7 @@ $locator2 is an element locator pointing to the second element
 
 =over
 
-Returns true if two elements are ordered and have same parent, false otherwise
+Returns true if element1 is the previous sibling of element2, false otherwise
 
 =back
 
@@ -2520,28 +2499,6 @@ sub get_cursor_position {
     return $self->get_number("getCursorPosition", @_);
 }
 
-=item $sel-E<gt>set_context($context, $log_level_threshold)
-
-Writes a message to the status bar and adds a note to the browser-sidelog.
-If logLevelThreshold is specified, set the threshold for loggingto that level (debug, info, warn, error).
-
-(Note that the browser-side logs will <i>not</i> be sent back to theserver, and are invisible to the Client Driver.)
-
-=over
-
-$context is the message to be sent to the browser
-
-$log_level_threshold is one of "debug", "info", "warn", "error", sets the threshold for browser-side logging
-
-=back
-
-=cut
-
-sub set_context {
-    my $self = shift;
-    $self->do_command("setContext", @_);
-}
-
 =item $sel-E<gt>get_expression($expression)
 
 Returns the specified expression.
@@ -2564,6 +2521,65 @@ Returns the value passed in
 sub get_expression {
     my $self = shift;
     return $self->get_string("getExpression", @_);
+}
+
+=item $sel-E<gt>get_xpath_count($xpath)
+
+Returns the number of nodes that match the specified xpath, eg. "//table" would givethe number of tables.
+
+=over
+
+$xpath is the xpath expression to evaluate. do NOT wrap this expression in a 'count()' function; we will do that for you.
+
+=back
+
+=over
+
+Returns the number of nodes that match the specified xpath
+
+=back
+
+=cut
+
+sub get_xpath_count {
+    my $self = shift;
+    return $self->get_number("getXpathCount", @_);
+}
+
+=item $sel-E<gt>assign_id($locator, $identifier)
+
+Temporarily sets the "id" attribute of the specified element, so you can locate it in the futureusing its ID rather than a slow/complicated XPath.  This ID will disappear once the page isreloaded.
+
+=over
+
+$locator is an element locator pointing to an element
+
+$identifier is a string to be used as the ID of the specified element
+
+=back
+
+=cut
+
+sub assign_id {
+    my $self = shift;
+    $self->do_command("assignId", @_);
+}
+
+=item $sel-E<gt>allow_native_xpath($allow)
+
+Specifies whether Selenium should use the native in-browser implementationof XPath (if any native version is available); if you pass "false" tothis function, we will always use our pure-JavaScript xpath library.Using the pure-JS xpath library can improve the consistency of xpathelement locators between different browser vendors, but the pure-JSversion is much slower than the native implementations.
+
+=over
+
+$allow is boolean, true means we'll prefer to use native XPath; false means we'll only use JS XPath
+
+=back
+
+=cut
+
+sub allow_native_xpath {
+    my $self = shift;
+    $self->do_command("allowNativeXpath", @_);
 }
 
 =item $sel-E<gt>wait_for_condition($script, $timeout)
@@ -2625,6 +2641,27 @@ sub wait_for_page_to_load {
     $self->do_command("waitForPageToLoad", @_);
 }
 
+=item $sel-E<gt>wait_for_frame_to_load($frame_address, $timeout)
+
+Waits for a new frame to load.
+Selenium constantly keeps track of new pages and frames loading, and sets a "newPageLoaded" flag when it first notices a page load.
+See waitForPageToLoad for more information.
+
+=over
+
+$frame_address is FrameAddress from the server side
+
+$timeout is a timeout in milliseconds, after which this command will return with an error
+
+=back
+
+=cut
+
+sub wait_for_frame_to_load {
+    my $self = shift;
+    $self->do_command("waitForFrameToLoad", @_);
+}
+
 =item $sel-E<gt>get_cookie()
 
 Return all cookies of the current page under test.
@@ -2678,6 +2715,109 @@ $path is the path property of the cookie to be deleted
 sub delete_cookie {
     my $self = shift;
     $self->do_command("deleteCookie", @_);
+}
+
+=item $sel-E<gt>set_browser_log_level($log_level)
+
+Sets the threshold for browser-side logging messages; log messages beneath this threshold will be discarded.Valid logLevel strings are: "debug", "info", "warn", "error" or "off".To see the browser logs, you need toeither show the log window in GUI mode, or enable browser-side logging in Selenium RC.
+
+=over
+
+$log_level is one of the following: "debug", "info", "warn", "error" or "off"
+
+=back
+
+=cut
+
+sub set_browser_log_level {
+    my $self = shift;
+    $self->do_command("setBrowserLogLevel", @_);
+}
+
+=item $sel-E<gt>run_script($script)
+
+Creates a new "script" tag in the body of the current test window, and adds the specified text into the body of the command.  Scripts run inthis way can often be debugged more easily than scripts executed usingSelenium's "getEval" command.  Beware that JS exceptions thrown in these scripttags aren't managed by Selenium, so you should probably wrap your scriptin try/catch blocks if there is any chance that the script will throwan exception.
+
+=over
+
+$script is the JavaScript snippet to run
+
+=back
+
+=cut
+
+sub run_script {
+    my $self = shift;
+    $self->do_command("runScript", @_);
+}
+
+=item $sel-E<gt>add_location_strategy($strategy_name)
+
+Defines a new function for Selenium to locate elements on the page.For example,if you define the strategy "foo", and someone runs click("foo=blah"), we'llrun your function, passing you the string "blah", and click on the element that your functionreturns, or throw an "Element not found" error if your function returns null.We'll pass three arguments to your function:
+
+=over
+
+=item *
+
+locator: the string the user passed in
+
+=item *
+
+inWindow: the currently selected window
+
+=item *
+
+inDocument: the currently selected document
+
+=back
+
+The function must return null if the element can't be found.
+
+=over
+
+$strategy_name is the name of the strategy to define; this should use only   letters [a-zA-Z] with no spaces or other punctuation.
+
+=back
+
+=cut
+
+sub add_location_strategy {
+    my $self = shift;
+    $self->do_command("addLocationStrategy", @_);
+}
+
+=item $sel-E<gt>set_context($context)
+
+Writes a message to the status bar and adds a note to the browser-sidelog.
+
+=over
+
+$context is the message to be sent to the browser
+
+=back
+
+=cut
+
+sub set_context {
+    my $self = shift;
+    $self->do_command("setContext", @_);
+}
+
+=item $sel-E<gt>capture_screenshot($filename)
+
+Captures a PNG screenshot to the specified file.
+
+=over
+
+$filename is the absolute path to the file to be written, e.g. "c:\blah\screenshot.png"
+
+=back
+
+=cut
+
+sub capture_screenshot {
+    my $self = shift;
+    $self->do_command("captureScreenshot", @_);
 }
 
 =item $sel-E<gt>wait_for_text_present($text, $timeout)
