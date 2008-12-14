@@ -16,6 +16,7 @@
 
 package WWW::Selenium;
 use LWP::UserAgent;
+use HTTP::Headers;
 use HTTP::Request;
 use URI::Escape;
 use Carp qw(croak);
@@ -373,22 +374,34 @@ browser-specific prompting.
 Defaults to true, and will attempt to close the browser if the object
 goes out of scope and stop hasn't been called.
 
+=item * C<session_id>
+
+Optional argument that can be used to reuse session_ids between test
+runs.  This can make for faster testing.
+
 =back
 
 =cut
 
 sub new {
     my ($class, %args) = @_;
-    my $self = { # default args:
-                 host => 'localhost',
-                 port => 4444,
-                 auto_stop => 1,
-                 browser_start_command => delete $args{browser} || '*firefox',
-                 %args,
-               };
+    my $self = {    # default args:
+        host                  => 'localhost',
+        port                  => 4444,
+        auto_stop             => 1,
+        browser_start_command => delete $args{browser} || '*firefox',
+        extension_js          => "",
+        session_id            => undef,
+        %args,
+    };
     croak 'browser_url is mandatory!' unless $self->{browser_url};
     bless $self, $class or die "Can't bless $class: $!";
     return $self;
+}
+
+sub set_extension_js {
+    my $self = shift;
+    $self->{extension_js} = shift;
 }
 
 sub start {
@@ -396,7 +409,8 @@ sub start {
     return if $self->{session_id};
     $self->{session_id} = $self->get_string("getNewBrowserSession", 
                                             $self->{browser_start_command}, 
-                                            $self->{browser_url});
+                                            $self->{browser_url},
+                                            $self->{extension_js});
 }
 
 sub stop {
@@ -422,23 +436,24 @@ sub do_command {
     }
 
     $command = uri_escape($command);
-    my $fullurl = "http://$self->{host}:$self->{port}/selenium-server/driver/"
-                  . "\?cmd=$command";
+    my $fullurl = "http://$self->{host}:$self->{port}/selenium-server/driver/";
+    my $content = "cmd=$command";
     my $i = 1;
     @args = grep defined, @args;
     while (@args) {
-        $fullurl .= "&$i=" . URI::Escape::uri_escape_utf8(shift @args);
+        $content .= "&$i=" . URI::Escape::uri_escape_utf8(shift @args);
         $i++;
     }
     if (defined $self->{session_id}) {
-        $fullurl .= "&sessionId=$self->{session_id}";
+        $content .= "&sessionId=$self->{session_id}";
     }
     print "---> Requesting $fullurl\n" if $self->{verbose};
 
     # We use the full version of LWP to make sure we issue an 
     # HTTP 1.1 request (SRC-25)
     my $ua = LWP::UserAgent->new;
-    my $response = $ua->request( HTTP::Request->new(GET => $fullurl) );
+    my $header = HTTP::Headers->new( Content_Type => 'application/x-www-form-urlencoded; charset=utf-8' );
+    my $response = $ua->request( HTTP::Request->new( 'POST', $fullurl, $header, $content ) );
     my $result;
     if ($response->is_success) {
         $result = $response->content;
