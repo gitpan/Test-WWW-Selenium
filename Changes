@@ -1,5 +1,12 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+1.18 - Mon Aug 31 23:20:21 PDT 2009
+  - Update list of commands that do not require a locator (barbie++)
+  - Update Module::Install to 0.91
+  - Ensure that do_command reuses LWP objects and caches 
+    connections for performance (konobi++)
+  - Minor POD touchups by (dandv++)
+
 1.17 - Tue 30 Dec 2008 00:12:53 PST
  - Allow no_locator methods to be subclassable
    - Thanks to Michael Hendricks of Grant Street Group.

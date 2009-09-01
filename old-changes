@@ -1,0 +1,10 @@
+0f49f62c6faea1b466c533e911d84deae10feddb Update changes
+843685dabe12295030ab872fe10daaaa1dd60eaf add contributors
+e1ff02c1908db34e1e0d1b7f98224c211400d348 bump version, add contributors
+0189893d1757f509aadaaaef9a434d3210d8d84f Minor POD touchups
+4e3485183bb38b8744b11840b25cf23f8057fb98 Ensure that do_command reuses LWP objects and caches connections
+6595015686bb741767c31844386bccd792ae0e64 Update Module::Install
+5dda1cb44cae5306fb2921bcd822a25d42355344 Prepare to release 1.15
+14e181394ed3b220a551da7ac845fbeb58b47d0d Allow set_timeout() to be called before open()
+d066cb86f00d9a4a8c725d2031d6bdbb3f5a3911 Update test files so they use warnings, strict and so they can be run from command line.
+d15f98b5e8aa63db33dc8259043a0e03ca7ac8fa Update iedoc fetch tool to put iedoc in target/iedoc.xml
