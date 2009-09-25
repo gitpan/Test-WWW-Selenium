@@ -1,5 +1,9 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+1.19 - Thu Sep 24 19:27:51 PDT 2009
+  - Fixed test to not spew deprecation errors
+  - removed t/test_ajax_jsf.t because the site it used went away
+
 1.18 - Mon Aug 31 23:20:21 PDT 2009
   - Update list of commands that do not require a locator (barbie++)
   - Update Module::Install to 0.91

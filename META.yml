@@ -26,4 +26,4 @@ requires:
   URI::Escape: 1.31
 resources:
   license: http://dev.perl.org/licenses/
-version: 1.18
+version: 1.19
