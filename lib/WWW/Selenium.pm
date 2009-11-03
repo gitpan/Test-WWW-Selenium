@@ -16,7 +16,6 @@
 
 package WWW::Selenium;
 use LWP::UserAgent;
-use HTTP::Headers;
 use HTTP::Request;
 use URI::Escape;
 use Carp qw(croak);
@@ -209,6 +208,26 @@ css=span#firstChild + span
 
 Currently the css selector locator supports all css1, css2 and css3 selectors except namespace in css3, some pseudo classes(:nth-of-type, :nth-last-of-type, :first-of-type, :last-of-type, :only-of-type, :visited, :hover, :active, :focus, :indeterminate) and pseudo elements(::first-line, ::first-letter, ::selection, ::before, ::after). 
 
+=item *
+
+B<ui>=I<uiSpecifierString>:Locate an element by resolving the UI specifier string to another locator, and evaluating it. See the http://svn.openqa.org/fisheye/browse/~raw,r=trunk/selenium/trunk/src/main/resources/core/scripts/ui-doc.html (Selenium UI-Element Reference) for more details.
+
+=over
+
+=item *
+
+ui=loginPages::loginButton()
+
+=item *
+
+ui=settingsPages::toggle(label=Hide Email)
+
+=item *
+
+ui=forumPages::postBody(index=2)//a[2]
+
+=back
+
 =back
 
 Without an explicit locator prefix, Selenium uses the following defaultstrategies:
@@ -275,11 +294,17 @@ B<regexp:>I<regexp>:Match a string using a regular-expression. The full power of
 
 =item *
 
+B<regexpi:>I<regexpi>:Match a string using a case-insensitive regular-expression.
+
+=item *
+
 B<exact:>I<string>:Match a string exactly, verbatim, without any of that fancy wildcardstuff.
 
 =back
 
 If no pattern prefix is specified, Selenium assumes that it's a "glob"pattern.
+
+For commands that return multiple values (such as verifySelectOptions),the string being matched is a comma-separated list of the return values,where both commas and backslashes in the values are backslash-escaped.When providing a pattern, the optional matching syntax (i.e. glob,regexp, etc.) is specified once, as usual, at the beginning of thepattern.
 
 =cut
 
@@ -374,10 +399,10 @@ browser-specific prompting.
 Defaults to true, and will attempt to close the browser if the object
 goes out of scope and stop hasn't been called.
 
-=item * C<session_id>
+=item * C<keep_alive>
 
-Optional argument that can be used to reuse session_ids between test
-runs.  This can make for faster testing.
+Number of connections LWP should cache. This is just a minor speed
+improvement. Defaults to 5.
 
 =back
 
@@ -385,23 +410,18 @@ runs.  This can make for faster testing.
 
 sub new {
     my ($class, %args) = @_;
-    my $self = {    # default args:
-        host                  => 'localhost',
-        port                  => 4444,
-        auto_stop             => 1,
-        browser_start_command => delete $args{browser} || '*firefox',
-        extension_js          => "",
-        session_id            => undef,
-        %args,
-    };
+    my $self = { # default args:
+                 host => 'localhost',
+                 port => 4444,
+                 auto_stop => 1,
+                 browser_start_command => delete $args{browser} || '*firefox',
+                 _ua => undef,
+                 keep_alive => 5,
+                 %args,
+               };
     croak 'browser_url is mandatory!' unless $self->{browser_url};
     bless $self, $class or die "Can't bless $class: $!";
     return $self;
-}
-
-sub set_extension_js {
-    my $self = shift;
-    $self->{extension_js} = shift;
 }
 
 sub start {
@@ -409,8 +429,7 @@ sub start {
     return if $self->{session_id};
     $self->{session_id} = $self->get_string("getNewBrowserSession", 
                                             $self->{browser_start_command}, 
-                                            $self->{browser_url},
-                                            $self->{extension_js});
+                                            $self->{browser_url});
 }
 
 sub stop {
@@ -436,24 +455,24 @@ sub do_command {
     }
 
     $command = uri_escape($command);
-    my $fullurl = "http://$self->{host}:$self->{port}/selenium-server/driver/";
-    my $content = "cmd=$command";
+    my $fullurl = "http://$self->{host}:$self->{port}/selenium-server/driver/"
+                  . "\?cmd=$command";
     my $i = 1;
     @args = grep defined, @args;
     while (@args) {
-        $content .= "&$i=" . URI::Escape::uri_escape_utf8(shift @args);
+        $fullurl .= "&$i=" . URI::Escape::uri_escape_utf8(shift @args);
         $i++;
     }
     if (defined $self->{session_id}) {
-        $content .= "&sessionId=$self->{session_id}";
+        $fullurl .= "&sessionId=$self->{session_id}";
     }
     print "---> Requesting $fullurl\n" if $self->{verbose};
 
     # We use the full version of LWP to make sure we issue an 
     # HTTP 1.1 request (SRC-25)
-    my $ua = LWP::UserAgent->new;
-    my $header = HTTP::Headers->new( Content_Type => 'application/x-www-form-urlencoded; charset=utf-8' );
-    my $response = $ua->request( HTTP::Request->new( 'POST', $fullurl, $header, $content ) );
+    
+    my $ua = $self->ua;
+    my $response = $ua->request( HTTP::Request->new(GET => $fullurl) );
     my $result;
     if ($response->is_success) {
         $result = $response->content;
@@ -465,6 +484,19 @@ sub do_command {
     $result = decode_utf8($result) if $encode_present;
     die "Error requesting $fullurl:\n$result\n" unless $result =~ /^OK/;
     return $result;
+}
+
+sub ua {
+    my $self = shift;
+
+    $self->{_ua} ||= LWP::UserAgent->new(keep_alive => $self->{keep_alive});
+
+    if (my $msec = $self->{_timeout}) {
+        # Keep the 3 minute timeout (LWP::UserAgent default) on top of the
+        # selenium timeout
+        $self->{_ua}->timeout( int($msec/1000 + 180) );
+    }
+    return $self->{_ua};
 }
 
 sub get_string {
@@ -589,6 +621,23 @@ sub double_click {
     $self->do_command("doubleClick", @_);
 }
 
+=item $sel-E<gt>context_menu($locator)
+
+Simulates opening the context menu for the specified element (as might happen if the user "right-clicked" on the element).
+
+=over
+
+$locator is an element locator
+
+=back
+
+=cut
+
+sub context_menu {
+    my $self = shift;
+    $self->do_command("contextMenu", @_);
+}
+
 =item $sel-E<gt>click_at($locator, $coord_string)
 
 Clicks on a link, button, checkbox or radio button. If the click actioncauses a new page to load (like a link usually does), callwaitForPageToLoad.
@@ -627,6 +676,25 @@ sub double_click_at {
     $self->do_command("doubleClickAt", @_);
 }
 
+=item $sel-E<gt>context_menu_at($locator, $coord_string)
+
+Simulates opening the context menu for the specified element (as might happen if the user "right-clicked" on the element).
+
+=over
+
+$locator is an element locator
+
+$coord_string is specifies the x,y position (i.e. - 10,20) of the mouse      event relative to the element returned by the locator.
+
+=back
+
+=cut
+
+sub context_menu_at {
+    my $self = shift;
+    $self->do_command("contextMenuAt", @_);
+}
+
 =item $sel-E<gt>fire_event($locator, $event_name)
 
 Explicitly simulate an event, to trigger the corresponding "onI<event>"handler.
@@ -644,6 +712,23 @@ $event_name is the event name, e.g. "focus" or "blur"
 sub fire_event {
     my $self = shift;
     $self->do_command("fireEvent", @_);
+}
+
+=item $sel-E<gt>focus($locator)
+
+Move the focus to the specified element; for example, if the element is an input field, move the cursor to that field.
+
+=over
+
+$locator is an element locator
+
+=back
+
+=cut
+
+sub focus {
+    my $self = shift;
+    $self->do_command("focus", @_);
 }
 
 =item $sel-E<gt>key_press($locator, $key_sequence)
@@ -827,7 +912,7 @@ sub mouse_out {
 
 =item $sel-E<gt>mouse_down($locator)
 
-Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
+Simulates a user pressing the left mouse button (without releasing it yet) onthe specified element.
 
 =over
 
@@ -842,9 +927,26 @@ sub mouse_down {
     $self->do_command("mouseDown", @_);
 }
 
+=item $sel-E<gt>mouse_down_right($locator)
+
+Simulates a user pressing the right mouse button (without releasing it yet) onthe specified element.
+
+=over
+
+$locator is an element locator
+
+=back
+
+=cut
+
+sub mouse_down_right {
+    my $self = shift;
+    $self->do_command("mouseDownRight", @_);
+}
+
 =item $sel-E<gt>mouse_down_at($locator, $coord_string)
 
-Simulates a user pressing the mouse button (without releasing it yet) atthe specified location.
+Simulates a user pressing the left mouse button (without releasing it yet) atthe specified location.
 
 =over
 
@@ -859,6 +961,25 @@ $coord_string is specifies the x,y position (i.e. - 10,20) of the mouse      eve
 sub mouse_down_at {
     my $self = shift;
     $self->do_command("mouseDownAt", @_);
+}
+
+=item $sel-E<gt>mouse_down_right_at($locator, $coord_string)
+
+Simulates a user pressing the right mouse button (without releasing it yet) atthe specified location.
+
+=over
+
+$locator is an element locator
+
+$coord_string is specifies the x,y position (i.e. - 10,20) of the mouse      event relative to the element returned by the locator.
+
+=back
+
+=cut
+
+sub mouse_down_right_at {
+    my $self = shift;
+    $self->do_command("mouseDownRightAt", @_);
 }
 
 =item $sel-E<gt>mouse_up($locator)
@@ -878,6 +999,23 @@ sub mouse_up {
     $self->do_command("mouseUp", @_);
 }
 
+=item $sel-E<gt>mouse_up_right($locator)
+
+Simulates the event that occurs when the user releases the right mouse button (i.e., stopsholding the button down) on the specified element.
+
+=over
+
+$locator is an element locator
+
+=back
+
+=cut
+
+sub mouse_up_right {
+    my $self = shift;
+    $self->do_command("mouseUpRight", @_);
+}
+
 =item $sel-E<gt>mouse_up_at($locator, $coord_string)
 
 Simulates the event that occurs when the user releases the mouse button (i.e., stopsholding the button down) at the specified location.
@@ -895,6 +1033,25 @@ $coord_string is specifies the x,y position (i.e. - 10,20) of the mouse      eve
 sub mouse_up_at {
     my $self = shift;
     $self->do_command("mouseUpAt", @_);
+}
+
+=item $sel-E<gt>mouse_up_right_at($locator, $coord_string)
+
+Simulates the event that occurs when the user releases the right mouse button (i.e., stopsholding the button down) at the specified location.
+
+=over
+
+$locator is an element locator
+
+$coord_string is specifies the x,y position (i.e. - 10,20) of the mouse      event relative to the element returned by the locator.
+
+=back
+
+=cut
+
+sub mouse_up_right_at {
+    my $self = shift;
+    $self->do_command("mouseUpRightAt", @_);
 }
 
 =item $sel-E<gt>mouse_move($locator)
@@ -998,11 +1155,17 @@ sub set_speed {
 
 Get execution speed (i.e., get the millisecond length of the delay following each selenium operation).  By default, there is no such delay, i.e.,the delay is 0 milliseconds.See also setSpeed.
 
+=over
+
+Returns the execution speed in milliseconds.
+
+=back
+
 =cut
 
 sub get_speed {
     my $self = shift;
-    $self->do_command("getSpeed", @_);
+    return $self->get_string("getSpeed", @_);
 }
 
 =item $sel-E<gt>check($locator)
@@ -1226,10 +1389,26 @@ sub open_window {
 
 =item $sel-E<gt>select_window($window_id)
 
-Selects a popup window; once a popup window has been selected, allcommands go to that window. To select the main window again, use nullas the target.
-Note that there is a big difference between a window's internal JavaScript "name" propertyand the "title" of a given window's document (which is normally what you actually see, as an end user,in the title bar of the window).  The "name" is normally invisible to the end-user; it's the second parameter "windowName" passed to the JavaScript method window.open(url, windowName, windowFeatures, replaceFlag)(which selenium intercepts).
+Selects a popup window using a window locator; once a popup window has been selected, allcommands go to that window. To select the main window again, use nullas the target.
+Window locators provide different ways of specifying the window object:by title, by internal JavaScript "name," or by JavaScript variable.
 
-Selenium has several strategies for finding the window object referred to by the "windowID" parameter.
+=over
+
+=item *
+
+B<title>=I<My Special Window>:Finds the window using the text that appears in the title bar.  Be careful;two windows can share the same title.  If that happens, this locator willjust pick one.
+
+=item *
+
+B<name>=I<myWindow>:Finds the window using its internal JavaScript "name" property.  This is the second parameter "windowName" passed to the JavaScript method window.open(url, windowName, windowFeatures, replaceFlag)(which Selenium intercepts).
+
+=item *
+
+B<var>=I<variableName>:Some pop-up windows are unnamed (anonymous), but are associated with a JavaScript variable name in the currentapplication window, e.g. "window.foo = window.open(url);".  In those cases, you can open the window using"var=foo".
+
+=back
+
+If no window locator prefix is provided, we'll try to guess what you mean like this:
 
 1.) if windowID is null, (or the string "null") then it is assumed the user is referring to the original window instantiated by the browser).
 
@@ -1237,9 +1416,9 @@ Selenium has several strategies for finding the window object referred to by the
 
 3.) Otherwise, selenium looks in a hash it maintains that maps string names to window "names".
 
-4.) If <i>that</i> fails, we'll try looping over all of the known windows to try to find the appropriate "title".Since "title" is not necessarily unique, this may have unexpected behavior.
+4.) If I<that> fails, we'll try looping over all of the known windows to try to find the appropriate "title".Since "title" is not necessarily unique, this may have unexpected behavior.
 
-If you're having trouble figuring out what is the name of a window that you want to manipulate, look at the selenium log messageswhich identify the names of windows created via window.open (and therefore intercepted by selenium).  You will see messageslike the following for each window as it is opened:
+If you're having trouble figuring out the name of a window that you want to manipulate, look at the Selenium log messageswhich identify the names of windows created via window.open (and therefore intercepted by Selenium).  You will see messageslike the following for each window as it is opened:
 
 C<debug: window.open call intercepted; window ID (which you can use with selectWindow()) is "myNewWindow">
 
@@ -1256,6 +1435,46 @@ $window_id is the JavaScript window ID of the window to select
 sub select_window {
     my $self = shift;
     $self->do_command("selectWindow", @_);
+}
+
+=item $sel-E<gt>select_pop_up($window_id)
+
+Simplifies the process of selecting a popup window (and does not offerfunctionality beyond what C<selectWindow()> already provides).
+
+=over
+
+=item *
+
+If C<windowID> is either not specified, or specified as"null", the first non-top window is selected. The top window is the onethat would be selected by C<selectWindow()> without providing aC<windowID> . This should not be used when more than one popupwindow is in play.
+
+=item *
+
+Otherwise, the window will be looked up consideringC<windowID> as the following in order: 1) the "name" of thewindow, as specified to C<window.open()>; 2) a javascriptvariable which is a reference to a window; and 3) the title of thewindow. This is the same ordered lookup performed byC<selectWindow> .
+
+=back
+
+=over
+
+$window_id is an identifier for the popup window, which can take on a                  number of different meanings
+
+=back
+
+=cut
+
+sub select_pop_up {
+    my $self = shift;
+    $self->do_command("selectPopUp", @_);
+}
+
+=item $sel-E<gt>deselect_pop_up()
+
+Selects the main window. Functionally equivalent to usingC<selectWindow()> and specifying no value forC<windowID>.
+
+=cut
+
+sub deselect_pop_up {
+    my $self = shift;
+    $self->do_command("deselectPopUp", @_);
 }
 
 =item $sel-E<gt>select_frame($locator)
@@ -1334,9 +1553,9 @@ Waits for a popup window to appear and load up.
 
 =over
 
-$window_id is the JavaScript window ID of the window that will appear
+$window_id is the JavaScript window "name" of the window that will appear (not the text of the title bar)                 If unspecified, or specified as "null", this command will                 wait for the first non-top window to appear (don't rely                 on this if you are working with multiple popups                 simultaneously).
 
-$timeout is a timeout in milliseconds, after which the action will return with an error
+$timeout is a timeout in milliseconds, after which the action will return with an error.                If this value is not specified, the default Selenium                timeout will be used. See the setTimeout() command.
 
 =back
 
@@ -1344,12 +1563,16 @@ $timeout is a timeout in milliseconds, after which the action will return with a
 
 sub wait_for_pop_up {
     my $self = shift;
+    local $self->{_timeout} = $_[1];
+
     $self->do_command("waitForPopUp", @_);
 }
 
 =item $sel-E<gt>choose_cancel_on_next_confirmation()
 
 By default, Selenium's overridden window.confirm() function willreturn true, as if the user had manually clicked OK; after runningthis command, the next call to confirm() will return false, as ifthe user had clicked Cancel.  Selenium will then resume using thedefault behavior for future confirmations, automatically returning true (OK) unless/until you explicitly call this command for eachconfirmation.
+
+Take note - every time a confirmation comes up, you mustconsume it with a corresponding getConfirmation, or elsethe next selenium operation will fail.
 
 =cut
 
@@ -1361,6 +1584,8 @@ sub choose_cancel_on_next_confirmation {
 =item $sel-E<gt>choose_ok_on_next_confirmation()
 
 Undo the effect of calling chooseCancelOnNextConfirmation.  Notethat Selenium's overridden window.confirm() function will normally automaticallyreturn true, as if the user had manually clicked OK, so you shouldn'tneed to use this command unless for some reason you need to changeyour mind prior to the next confirmation.  After any confirmation, Selenium will resume using thedefault behavior for future confirmations, automatically returning true (OK) unless/until you explicitly call chooseCancelOnNextConfirmation for eachconfirmation.
+
+Take note - every time a confirmation comes up, you mustconsume it with a corresponding getConfirmation, or elsethe next selenium operation will fail.
 
 =cut
 
@@ -1476,11 +1701,11 @@ sub is_confirmation_present {
 =item $sel-E<gt>get_alert()
 
 Retrieves the message of a JavaScript alert generated during the previous action, or fail if there were no alerts.
-Getting an alert has the same effect as manually clicking OK. If analert is generated but you do not get/verify it, the next Selenium actionwill fail.
+Getting an alert has the same effect as manually clicking OK. If analert is generated but you do not consume it with getAlert, the next Selenium actionwill fail.
 
-NOTE: under Selenium, JavaScript alerts will NOT pop up a visible alertdialog.
+Under Selenium, JavaScript alerts will NOT pop up a visible alertdialog.
 
-NOTE: Selenium does NOT support JavaScript alerts that are generated in apage's onload() event handler. In this case a visible dialog WILL begenerated and Selenium will hang until someone manually clicks OK.
+Selenium does NOT support JavaScript alerts that are generated in apage's onload() event handler. In this case a visible dialog WILL begenerated and Selenium will hang until someone manually clicks OK.
 
 =over
 
@@ -1498,7 +1723,9 @@ sub get_alert {
 =item $sel-E<gt>get_confirmation()
 
 Retrieves the message of a JavaScript confirmation dialog generated duringthe previous action.
-By default, the confirm function will return true, having the same effectas manually clicking OK. This can be changed by prior execution of thechooseCancelOnNextConfirmation command. If an confirmation is generatedbut you do not get/verify it, the next Selenium action will fail.
+By default, the confirm function will return true, having the same effectas manually clicking OK. This can be changed by prior execution of thechooseCancelOnNextConfirmation command. 
+
+If an confirmation is generated but you do not consume it with getConfirmation,the next Selenium action will fail.
 
 NOTE: under Selenium, JavaScript confirmations will NOT pop up a visibledialog.
 
@@ -1957,7 +2184,7 @@ sub get_select_options {
 
 =item $sel-E<gt>get_attribute($attribute_locator)
 
-Gets the value of an element attribute.
+Gets the value of an element attribute. The value of the attribute maydiffer across browsers (this is the case for the "style" attribute, forexample).
 
 =over
 
@@ -2126,7 +2353,7 @@ sub get_all_fields {
 
 =item $sel-E<gt>get_attribute_from_all_windows($attribute_name)
 
-Returns every instance of some attribute from all known windows.
+Returns an array of JavaScript property values from all known windows having one.
 
 =over
 
@@ -2265,11 +2492,11 @@ sub window_maximize {
 
 =item $sel-E<gt>get_all_window_ids()
 
-Returns the IDs of all windows that the browser knows about.
+Returns the IDs of all windows that the browser knows about in an array.
 
 =over
 
-Returns the IDs of all windows that the browser knows about.
+Returns Array of identifiers of all windows that the browser knows about.
 
 =back
 
@@ -2282,11 +2509,11 @@ sub get_all_window_ids {
 
 =item $sel-E<gt>get_all_window_names()
 
-Returns the names of all windows that the browser knows about.
+Returns the names of all windows that the browser knows about in an array.
 
 =over
 
-Returns the names of all windows that the browser knows about.
+Returns Array of names of all windows that the browser knows about.
 
 =back
 
@@ -2299,11 +2526,11 @@ sub get_all_window_names {
 
 =item $sel-E<gt>get_all_window_titles()
 
-Returns the titles of all windows that the browser knows about.
+Returns the titles of all windows that the browser knows about in an array.
 
 =over
 
-Returns the titles of all windows that the browser knows about.
+Returns Array of titles of all windows that the browser knows about.
 
 =back
 
@@ -2598,6 +2825,23 @@ sub allow_native_xpath {
     $self->do_command("allowNativeXpath", @_);
 }
 
+=item $sel-E<gt>ignore_attributes_without_value($ignore)
+
+Specifies whether Selenium will ignore xpath attributes that have novalue, i.e. are the empty string, when using the non-native xpathevaluation engine. You'd want to do this for performance reasons in IE.However, this could break certain xpaths, for example an xpath that looksfor an attribute whose value is NOT the empty string.The hope is that such xpaths are relatively rare, but the user shouldhave the option of using them. Note that this only influences xpathevaluation when using the ajaxslt engine (i.e. not "javascript-xpath").
+
+=over
+
+$ignore is boolean, true means we'll ignore attributes without value                        at the expense of xpath "correctness"; false means                        we'll sacrifice speed for correctness.
+
+=back
+
+=cut
+
+sub ignore_attributes_without_value {
+    my $self = shift;
+    $self->do_command("ignoreAttributesWithoutValue", @_);
+}
+
 =item $sel-E<gt>wait_for_condition($script, $timeout)
 
 Runs the specified JavaScript snippet repeatedly until it evaluates to "true".The snippet may have multiple lines, but only the result of the last linewill be considered.
@@ -2615,6 +2859,8 @@ $timeout is a timeout in milliseconds, after which this command will return with
 
 sub wait_for_condition {
     my $self = shift;
+    local $self->{_timeout} = $_[1];
+
     $self->do_command("waitForCondition", @_);
 }
 
@@ -2634,6 +2880,8 @@ $timeout is a timeout in milliseconds, after which the action will return with a
 
 sub set_timeout {
     my $self = shift;
+    $self->{_timeout} = $_[0];
+
     $self->do_command("setTimeout", @_);
 }
 
@@ -2654,6 +2902,8 @@ $timeout is a timeout in milliseconds, after which this command will return with
 
 sub wait_for_page_to_load {
     my $self = shift;
+    local $self->{_timeout} = $_[1];
+
     $self->do_command("waitForPageToLoad", @_);
 }
 
@@ -2675,6 +2925,8 @@ $timeout is a timeout in milliseconds, after which this command will return with
 
 sub wait_for_frame_to_load {
     my $self = shift;
+    local $self->{_timeout} = $_[1];
+
     $self->do_command("waitForFrameToLoad", @_);
 }
 
@@ -2695,6 +2947,52 @@ sub get_cookie {
     return $self->get_string("getCookie", @_);
 }
 
+=item $sel-E<gt>get_cookie_by_name($name)
+
+Returns the value of the cookie with the specified name, or throws an error if the cookie is not present.
+
+=over
+
+$name is the name of the cookie
+
+=back
+
+=over
+
+Returns the value of the cookie
+
+=back
+
+=cut
+
+sub get_cookie_by_name {
+    my $self = shift;
+    return $self->get_string("getCookieByName", @_);
+}
+
+=item $sel-E<gt>is_cookie_present($name)
+
+Returns true if a cookie with the specified name is present, or false otherwise.
+
+=over
+
+$name is the name of the cookie
+
+=back
+
+=over
+
+Returns true if a cookie with the specified name is present, or false otherwise.
+
+=back
+
+=cut
+
+sub is_cookie_present {
+    my $self = shift;
+    return $self->get_boolean("isCookiePresent", @_);
+}
+
 =item $sel-E<gt>create_cookie($name_value_pair, $options_string)
 
 Create a new cookie whose path and domain are same with those of current pageunder test, unless you specified a path for this cookie explicitly.
@@ -2703,7 +3001,7 @@ Create a new cookie whose path and domain are same with those of current pageund
 
 $name_value_pair is name and value of the cookie in a format "name=value"
 
-$options_string is options for the cookie. Currently supported options include 'path' and 'max_age'.      the optionsString's format is "path=/path/, max_age=60". The order of options are irrelevant, the unit      of the value of 'max_age' is second.
+$options_string is options for the cookie. Currently supported options include 'path', 'max_age' and 'domain'.      the optionsString's format is "path=/path/, max_age=60, domain=.foo.com". The order of options are irrelevant, the unit      of the value of 'max_age' is second.  Note that specifying a domain that isn't a subset of the current domain will      usually fail.
 
 =back
 
@@ -2714,15 +3012,15 @@ sub create_cookie {
     $self->do_command("createCookie", @_);
 }
 
-=item $sel-E<gt>delete_cookie($name, $path)
+=item $sel-E<gt>delete_cookie($name, $options_string)
 
-Delete a named cookie with specified path.
+Delete a named cookie with specified path and domain.  Be careful; to delete a cookie, youneed to delete it using the exact same path and domain that were used to create the cookie.If the path is wrong, or the domain is wrong, the cookie simply won't be deleted.  Alsonote that specifying a domain that isn't a subset of the current domain will usually fail.Since there's no way to discover at runtime the original path and domain of a given cookie,we've added an option called 'recurse' to try all sub-domains of the current domain withall paths that are a subset of the current path.  Beware; this option can be slow.  Inbig-O notation, it operates in O(n*m) time, where n is the number of dots in the domainname and m is the number of slashes in the path.
 
 =over
 
 $name is the name of the cookie to be deleted
 
-$path is the path property of the cookie to be deleted
+$options_string is options for the cookie. Currently supported options include 'path', 'domain'      and 'recurse.' The optionsString's format is "path=/path/, domain=.foo.com, recurse=true".      The order of options are irrelevant. Note that specifying a domain that isn't a subset of      the current domain will usually fail.
 
 =back
 
@@ -2731,6 +3029,17 @@ $path is the path property of the cookie to be deleted
 sub delete_cookie {
     my $self = shift;
     $self->do_command("deleteCookie", @_);
+}
+
+=item $sel-E<gt>delete_all_visible_cookies()
+
+Calls deleteCookie with recurse=true on all cookies visible to the current page.As noted on the documentation for deleteCookie, recurse=true can be much slowerthan simply deleting the cookies using a known domain/path.
+
+=cut
+
+sub delete_all_visible_cookies {
+    my $self = shift;
+    $self->do_command("deleteAllVisibleCookies", @_);
 }
 
 =item $sel-E<gt>set_browser_log_level($log_level)
@@ -2802,6 +3111,121 @@ sub add_location_strategy {
     $self->do_command("addLocationStrategy", @_);
 }
 
+=item $sel-E<gt>capture_entire_page_screenshot($filename, $kwargs)
+
+Saves the entire contents of the current window canvas to a PNG file.Contrast this with the captureScreenshot command, which captures thecontents of the OS viewport (i.e. whatever is currently being displayedon the monitor), and is implemented in the RC only. Currently this onlyworks in Firefox when running in chrome mode, and in IE non-HTA usingthe EXPERIMENTAL "Snapsie" utility. The Firefox implementation is mostlyborrowed from the Screengrab! Firefox extension. Please seehttp://www.screengrab.org and http://snapsie.sourceforge.net/ fordetails.
+
+=over
+
+$filename is the path to the file to persist the screenshot as. No                  filename extension will be appended by default.                  Directories will not be created if they do not exist,                    and an exception will be thrown, possibly by native                  code.
+
+$kwargs is a kwargs string that modifies the way the screenshot                  is captured. Example: "background=#CCFFDD" .                  Currently valid options:                                     =item background
+                     
+the background CSS for the HTML document. This                     may be useful to set for capturing screenshots of                     less-than-ideal layouts, for example where absolute                     positioning causes the calculation of the canvas                     dimension to fail and a black background is exposed                     (possibly obscuring black text).
+                  
+
+=back
+
+=cut
+
+sub capture_entire_page_screenshot {
+    my $self = shift;
+    $self->do_command("captureEntirePageScreenshot", @_);
+}
+
+=item $sel-E<gt>rollup($rollup_name, $kwargs)
+
+Executes a command rollup, which is a series of commands with a uniquename, and optionally arguments that control the generation of the set ofcommands. If any one of the rolled-up commands fails, the rollup isconsidered to have failed. Rollups may also contain nested rollups.
+
+=over
+
+$rollup_name is the name of the rollup command
+
+$kwargs is keyword arguments string that influences how the                    rollup expands into commands
+
+=back
+
+=cut
+
+sub rollup {
+    my $self = shift;
+    $self->do_command("rollup", @_);
+}
+
+=item $sel-E<gt>add_script($script_content, $script_tag_id)
+
+Loads script content into a new script tag in the Selenium document. Thisdiffers from the runScript command in that runScript adds the script tagto the document of the AUT, not the Selenium document. The followingentities in the script content are replaced by the characters theyrepresent:    &lt;    &gt;    &amp;The corresponding remove command is removeScript.
+
+=over
+
+$script_content is the Javascript content of the script to add
+
+$script_tag_id is (optional) the id of the new script tag. If                       specified, and an element with this id already                       exists, this operation will fail.
+
+=back
+
+=cut
+
+sub add_script {
+    my $self = shift;
+    $self->do_command("addScript", @_);
+}
+
+=item $sel-E<gt>remove_script($script_tag_id)
+
+Removes a script tag from the Selenium document identified by the givenid. Does nothing if the referenced tag doesn't exist.
+
+=over
+
+$script_tag_id is the id of the script element to remove.
+
+=back
+
+=cut
+
+sub remove_script {
+    my $self = shift;
+    $self->do_command("removeScript", @_);
+}
+
+=item $sel-E<gt>use_xpath_library($library_name)
+
+Allows choice of one of the available libraries.
+
+=over
+
+$library_name is name of the desired library Only the following three can be chosen: 
+
+=over
+
+   
+=item *
+
+"ajaxslt" - Google's library
+
+   
+=item *
+
+"javascript-xpath" - Cybozu Labs' faster library
+
+   
+=item *
+
+"default" - The default library.  Currently the default library is "ajaxslt" .
+
+ =back
+
+ If libraryName isn't one of these three, then  no change will be made.
+
+=back
+
+=cut
+
+sub use_xpath_library {
+    my $self = shift;
+    $self->do_command("useXpathLibrary", @_);
+}
+
 =item $sel-E<gt>set_context($context)
 
 Writes a message to the status bar and adds a note to the browser-sidelog.
@@ -2819,6 +3243,25 @@ sub set_context {
     $self->do_command("setContext", @_);
 }
 
+=item $sel-E<gt>attach_file($field_locator, $file_locator)
+
+Sets a file input (upload) field to the file listed in fileLocator
+
+=over
+
+$field_locator is an element locator
+
+$file_locator is a URL pointing to the specified file. Before the file  can be set in the input field (fieldLocator), Selenium RC may need to transfer the file    to the local machine before attaching the file in a web page form. This is common in selenium  grid configurations where the RC server driving the browser is not the same  machine that started the test.   Supported Browsers: Firefox ("*chrome") only.
+
+=back
+
+=cut
+
+sub attach_file {
+    my $self = shift;
+    $self->do_command("attachFile", @_);
+}
+
 =item $sel-E<gt>capture_screenshot($filename)
 
 Captures a PNG screenshot to the specified file.
@@ -2834,6 +3277,125 @@ $filename is the absolute path to the file to be written, e.g. "c:\blah\screensh
 sub capture_screenshot {
     my $self = shift;
     $self->do_command("captureScreenshot", @_);
+}
+
+=item $sel-E<gt>capture_screenshot_to_string()
+
+Capture a PNG screenshot.  It then returns the file as a base 64 encoded string.
+
+=over
+
+Returns The base 64 encoded string of the screen shot (PNG file)
+
+=back
+
+=cut
+
+sub capture_screenshot_to_string {
+    my $self = shift;
+    return $self->get_string("captureScreenshotToString", @_);
+}
+
+=item $sel-E<gt>capture_entire_page_screenshot_to_string($kwargs)
+
+Downloads a screenshot of the browser current window canvas to a based 64 encoded PNG file. The I<entire> windows canvas is captured,including parts rendered outside of the current view port.Currently this only works in Mozilla and when running in chrome mode.
+
+=over
+
+$kwargs is A kwargs string that modifies the way the screenshot is captured. Example: "background=#CCFFDD". This may be useful to set for capturing screenshots of less-than-ideal layouts, for example where absolute positioning causes the calculation of the canvas dimension to fail and a black background is exposed  (possibly obscuring black text).
+
+=back
+
+=over
+
+Returns The base 64 encoded string of the page screenshot (PNG file)
+
+=back
+
+=cut
+
+sub capture_entire_page_screenshot_to_string {
+    my $self = shift;
+    return $self->get_string("captureEntirePageScreenshotToString", @_);
+}
+
+=item $sel-E<gt>shut_down_selenium_server()
+
+Kills the running Selenium Server and all browser sessions.  After you run this command, you will no longer be able to sendcommands to the server; you can't remotely start the server once it has been stopped.  Normallyyou should prefer to run the "stop" command, which terminates the current browser session, rather than shutting down the entire server.
+
+=cut
+
+sub shut_down_selenium_server {
+    my $self = shift;
+    $self->do_command("shutDownSeleniumServer", @_);
+}
+
+=item $sel-E<gt>retrieve_last_remote_control_logs()
+
+Retrieve the last messages logged on a specific remote control. Useful for error reports, especiallywhen running multiple remote controls in a distributed environment. The maximum number of log messagesthat can be retrieve is configured on remote control startup.
+
+=over
+
+Returns The last N log messages as a multi-line string.
+
+=back
+
+=cut
+
+sub retrieve_last_remote_control_logs {
+    my $self = shift;
+    return $self->get_string("retrieveLastRemoteControlLogs", @_);
+}
+
+=item $sel-E<gt>key_down_native($keycode)
+
+Simulates a user pressing a key (without releasing it yet) by sending a native operating system keystroke.This function uses the java.awt.Robot class to send a keystroke; this more accurately simulates typinga key on the keyboard.  It does not honor settings from the shiftKeyDown, controlKeyDown, altKeyDown andmetaKeyDown commands, and does not target any particular HTML element.  To send a keystroke to a particularelement, focus on the element first before running this command.
+
+=over
+
+$keycode is an integer keycode number corresponding to a java.awt.event.KeyEvent; note that Java keycodes are NOT the same thing as JavaScript keycodes!
+
+=back
+
+=cut
+
+sub key_down_native {
+    my $self = shift;
+    $self->do_command("keyDownNative", @_);
+}
+
+=item $sel-E<gt>key_up_native($keycode)
+
+Simulates a user releasing a key by sending a native operating system keystroke.This function uses the java.awt.Robot class to send a keystroke; this more accurately simulates typinga key on the keyboard.  It does not honor settings from the shiftKeyDown, controlKeyDown, altKeyDown andmetaKeyDown commands, and does not target any particular HTML element.  To send a keystroke to a particularelement, focus on the element first before running this command.
+
+=over
+
+$keycode is an integer keycode number corresponding to a java.awt.event.KeyEvent; note that Java keycodes are NOT the same thing as JavaScript keycodes!
+
+=back
+
+=cut
+
+sub key_up_native {
+    my $self = shift;
+    $self->do_command("keyUpNative", @_);
+}
+
+=item $sel-E<gt>key_press_native($keycode)
+
+Simulates a user pressing and releasing a key by sending a native operating system keystroke.This function uses the java.awt.Robot class to send a keystroke; this more accurately simulates typinga key on the keyboard.  It does not honor settings from the shiftKeyDown, controlKeyDown, altKeyDown andmetaKeyDown commands, and does not target any particular HTML element.  To send a keystroke to a particularelement, focus on the element first before running this command.
+
+=over
+
+$keycode is an integer keycode number corresponding to a java.awt.event.KeyEvent; note that Java keycodes are NOT the same thing as JavaScript keycodes!
+
+=back
+
+=cut
+
+sub key_press_native {
+    my $self = shift;
+    $self->do_command("keyPressNative", @_);
 }
 
 =item $sel-E<gt>wait_for_text_present($text, $timeout)
