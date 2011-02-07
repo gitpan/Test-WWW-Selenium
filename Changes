@@ -1,6 +1,10 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
-1.23 - Not yet released
+1.24 - Mon Feb  7 10:28:32 PST 2011
+  - clean up pod after nudge from Dave Cross
+  - fix synopsis to set the test name correctly - thanks Herbert Leitz
+
+1.23 - 2010-09-05
   - 3 Patches from Tom Hukins++ to clean up inc/, pod and the license.
   - Suggestion from So Matsui++ to restore HTTP POST from the 1.20 release.
   - http_method now defaults to POST but can be set to GET.
