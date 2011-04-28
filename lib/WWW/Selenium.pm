@@ -13,8 +13,12 @@
 #  limitations under the License.
 #
 
-
 package WWW::Selenium;
+BEGIN {
+  $WWW::Selenium::VERSION = '1.25';
+}
+# ABSTRACT: Perl Client for the Selenium Remote Control test tool
+
 use LWP::UserAgent;
 use HTTP::Request;
 use HTTP::Headers;
@@ -25,22 +29,1164 @@ use Time::HiRes qw(sleep);
 use strict;
 use warnings;
 
-our $VERSION = '0.93';
+
+### This next part is auto-generated based on the big comment in selenium-api.js
+
+#Defines an object that runs Selenium commands.
+
+
+eval 'require Encode';
+my $encode_present = !$@;
+Encode->import('decode_utf8') if $encode_present;
+
+
+sub new {
+    my ($class, %args) = @_;
+    my $self = { # default args:
+                 host => 'localhost',
+                 port => 4444,
+                 auto_stop => 1,
+                 browser_start_command => delete $args{browser} || '*firefox',
+                 _ua => undef,
+                 keep_alive => 5,
+                 http_method => 'POST',
+                 %args,
+               };
+    croak 'browser_url is mandatory!' unless $self->{browser_url};
+    croak "Unknown http_method: ($self->{http_method})"
+        unless $self->{http_method} =~ m/^GET|POST$/;
+    bless $self, $class or die "Can't bless $class: $!";
+    return $self;
+}
+
+sub start {
+    my $self = shift;
+    return if $self->{session_id};
+    $self->{session_id} = $self->get_string("getNewBrowserSession",
+                                            $self->{browser_start_command},
+                                            $self->{browser_url});
+}
+
+sub stop {
+    my $self = shift;
+    return unless defined $self->{session_id};
+    $self->do_command("testComplete");
+    $self->{session_id} = undef;
+}
+
+sub do_command {
+    my ($self, $command, @args) = @_;
+    my $get = $self->{http_method} eq 'GET';
+
+    $self->{_page_opened} = 1 if $command eq 'open';
+
+    # Check that user has called open()
+    my %valid_pre_open_commands = (
+        testComplete => 1,
+        getNewBrowserSession => 1,
+        setTimeout => 1,
+    );
+    if (!$self->{_page_opened} and !$valid_pre_open_commands{$command}) {
+        die "You must open a page before calling $command. eg: \$sel->open('/');\n";
+    }
+
+    my $fullurl = "http://$self->{host}:$self->{port}/selenium-server/driver/";
+    $fullurl .= '?' if $get;
+    my $content = '';
+
+    my $i = 1;
+    @args = grep defined, @args;
+    my $params = $get ? \$fullurl : \$content;
+    $$params .= "cmd=" . uri_escape($command);
+    while (@args) {
+        $$params .= '&' . $i++ . '=' . URI::Escape::uri_escape_utf8(shift @args);
+    }
+    if (defined $self->{session_id}) {
+        $$params .= "&sessionId=$self->{session_id}";
+    }
+    # We use the full version of LWP to make sure we issue an
+    # HTTP 1.1 request (SRC-25)
+
+    my $method = $get ? 'GET' : 'POST';
+    print "---> Requesting $method $fullurl ($content)\n" if $self->{verbose};
+    my $header = HTTP::Headers->new(
+        $get ? () : (
+            Content_Type => 'application/x-www-form-urlencoded; charset=utf-8'
+        )
+    );
+    my $response = $self->ua->request(
+        HTTP::Request->new($method => $fullurl, $header, $content) );
+    my $result;
+    if ($response->is_success) {
+        $result = $response->content;
+        print "Got result: $result\n" if $self->{verbose};
+    }
+    else {
+        die "Error requesting $fullurl:\n" . $response->status_line . "\n";
+    }
+    $result = decode_utf8($result) if $encode_present;
+    die "Error requesting $fullurl:\n$result\n" unless $result =~ /^OK/;
+    return $result;
+}
+
+sub ua {
+    my $self = shift;
+
+    $self->{_ua} ||= LWP::UserAgent->new(keep_alive => $self->{keep_alive});
+
+    if (my $msec = $self->{_timeout}) {
+        # Keep the 3 minute timeout (LWP::UserAgent default) on top of the
+        # selenium timeout
+        $self->{_ua}->timeout( int($msec/1000 + 180) );
+    }
+    return $self->{_ua};
+}
+
+sub get_string {
+    my $self = shift;
+    my $result = $self->do_command(@_);
+    return substr($result, 3);
+}
+
+sub get_string_array {
+    my $self = shift;
+    my $result = $self->get_string(@_);
+    my $token = "";
+    my @tokens = ();
+    my @chars = split(//, $result);
+    for (my $i = 0; $i < @chars; $i++) {
+        my $char = $chars[$i];
+        if ($char eq '\\') {
+            $i++;
+            $char = $chars[$i];
+            $token .= $char;
+        } elsif ($char eq ',') {
+            push (@tokens, $token);
+            $token = "";
+        } else {
+            $token .= $char;
+        }
+    }
+    push (@tokens, $token);
+    return @tokens;
+}
+
+sub get_number {
+    my $self = shift;
+    my $result = $self->get_string(@_);
+    # Is there something else I need to do here?
+    return $result;
+}
+
+sub get_number_array {
+    my $self = shift;
+    my @result = $self->get_string_array(@_);
+    # Is there something else I need to do here?
+    return @result;
+}
+
+sub get_boolean {
+    my $self = shift;
+    my $result = $self->get_string(@_);
+    if ($result eq "true") {
+        return 1;
+    }
+    if ($result eq "false") {
+        return 0;
+    }
+    die "result is neither 'true' nor 'false': $result";
+}
+
+sub get_boolean_array {
+    my $self = shift;
+    my @result = $self->get_string_array(@_);
+    my @boolarr = ();
+    for (my $i = 0; $i < @result; $i++) {
+        if ($result[$i] eq "true") {
+            push (@boolarr, 1);
+            next;
+        }
+        if ($result[$i] eq "false") {
+            push (@boolarr, 0);
+            next;
+        }
+        die "result is neither 'true' nor 'false': ". $result[$i];
+    }
+    return @boolarr;
+}
+
+
+sub pause {
+    my ($self,$timeout) = @_;
+    $timeout = 1000  unless defined $timeout;
+    $timeout /= 1000;
+    sleep $timeout;
+}
+
+### From here on, everything's auto-generated from XML
+
+
+sub click {
+    my $self = shift;
+    $self->do_command("click", @_);
+}
+
+
+sub double_click {
+    my $self = shift;
+    $self->do_command("doubleClick", @_);
+}
+
+
+sub context_menu {
+    my $self = shift;
+    $self->do_command("contextMenu", @_);
+}
+
+
+sub click_at {
+    my $self = shift;
+    $self->do_command("clickAt", @_);
+}
+
+
+sub double_click_at {
+    my $self = shift;
+    $self->do_command("doubleClickAt", @_);
+}
+
+
+sub context_menu_at {
+    my $self = shift;
+    $self->do_command("contextMenuAt", @_);
+}
+
+
+sub fire_event {
+    my $self = shift;
+    $self->do_command("fireEvent", @_);
+}
+
+
+sub focus {
+    my $self = shift;
+    $self->do_command("focus", @_);
+}
+
+
+sub key_press {
+    my $self = shift;
+    $self->do_command("keyPress", @_);
+}
+
+
+sub shift_key_down {
+    my $self = shift;
+    $self->do_command("shiftKeyDown", @_);
+}
+
+
+sub shift_key_up {
+    my $self = shift;
+    $self->do_command("shiftKeyUp", @_);
+}
+
+
+sub meta_key_down {
+    my $self = shift;
+    $self->do_command("metaKeyDown", @_);
+}
+
+
+sub meta_key_up {
+    my $self = shift;
+    $self->do_command("metaKeyUp", @_);
+}
+
+
+sub alt_key_down {
+    my $self = shift;
+    $self->do_command("altKeyDown", @_);
+}
+
+
+sub alt_key_up {
+    my $self = shift;
+    $self->do_command("altKeyUp", @_);
+}
+
+
+sub control_key_down {
+    my $self = shift;
+    $self->do_command("controlKeyDown", @_);
+}
+
+
+sub control_key_up {
+    my $self = shift;
+    $self->do_command("controlKeyUp", @_);
+}
+
+
+sub key_down {
+    my $self = shift;
+    $self->do_command("keyDown", @_);
+}
+
+
+sub key_up {
+    my $self = shift;
+    $self->do_command("keyUp", @_);
+}
+
+
+sub mouse_over {
+    my $self = shift;
+    $self->do_command("mouseOver", @_);
+}
+
+
+sub mouse_out {
+    my $self = shift;
+    $self->do_command("mouseOut", @_);
+}
+
+
+sub mouse_down {
+    my $self = shift;
+    $self->do_command("mouseDown", @_);
+}
+
+
+sub mouse_down_right {
+    my $self = shift;
+    $self->do_command("mouseDownRight", @_);
+}
+
+
+sub mouse_down_at {
+    my $self = shift;
+    $self->do_command("mouseDownAt", @_);
+}
+
+
+sub mouse_down_right_at {
+    my $self = shift;
+    $self->do_command("mouseDownRightAt", @_);
+}
+
+
+sub mouse_up {
+    my $self = shift;
+    $self->do_command("mouseUp", @_);
+}
+
+
+sub mouse_up_right {
+    my $self = shift;
+    $self->do_command("mouseUpRight", @_);
+}
+
+
+sub mouse_up_at {
+    my $self = shift;
+    $self->do_command("mouseUpAt", @_);
+}
+
+
+sub mouse_up_right_at {
+    my $self = shift;
+    $self->do_command("mouseUpRightAt", @_);
+}
+
+
+sub mouse_move {
+    my $self = shift;
+    $self->do_command("mouseMove", @_);
+}
+
+
+sub mouse_move_at {
+    my $self = shift;
+    $self->do_command("mouseMoveAt", @_);
+}
+
+
+sub type {
+    my $self = shift;
+    $self->do_command("type", @_);
+}
+
+
+sub type_keys {
+    my $self = shift;
+    $self->do_command("typeKeys", @_);
+}
+
+
+sub set_speed {
+    my $self = shift;
+    $self->do_command("setSpeed", @_);
+}
+
+
+sub get_speed {
+    my $self = shift;
+    return $self->get_string("getSpeed", @_);
+}
+
+
+sub check {
+    my $self = shift;
+    $self->do_command("check", @_);
+}
+
+
+sub uncheck {
+    my $self = shift;
+    $self->do_command("uncheck", @_);
+}
+
+
+sub select {
+    my $self = shift;
+    $self->do_command("select", @_);
+}
+
+
+sub add_selection {
+    my $self = shift;
+    $self->do_command("addSelection", @_);
+}
+
+
+sub remove_selection {
+    my $self = shift;
+    $self->do_command("removeSelection", @_);
+}
+
+
+sub remove_all_selections {
+    my $self = shift;
+    $self->do_command("removeAllSelections", @_);
+}
+
+
+sub submit {
+    my $self = shift;
+    $self->do_command("submit", @_);
+}
+
+
+sub open {
+    my $self = shift;
+    $_[0] ||= '/'; # default to opening site root
+
+    $self->do_command("open", @_);
+}
+
+
+sub open_window {
+    my $self = shift;
+    $self->do_command("openWindow", @_);
+}
+
+
+sub select_window {
+    my $self = shift;
+    $self->do_command("selectWindow", @_);
+}
+
+
+sub select_pop_up {
+    my $self = shift;
+    $self->do_command("selectPopUp", @_);
+}
+
+
+sub deselect_pop_up {
+    my $self = shift;
+    $self->do_command("deselectPopUp", @_);
+}
+
+
+sub select_frame {
+    my $self = shift;
+    $self->do_command("selectFrame", @_);
+}
+
+
+sub get_whether_this_frame_match_frame_expression {
+    my $self = shift;
+    return $self->get_boolean("getWhetherThisFrameMatchFrameExpression", @_);
+}
+
+
+sub get_whether_this_window_match_window_expression {
+    my $self = shift;
+    return $self->get_boolean("getWhetherThisWindowMatchWindowExpression", @_);
+}
+
+
+sub wait_for_pop_up {
+    my $self = shift;
+    local $self->{_timeout} = $_[1];
+
+    $self->do_command("waitForPopUp", @_);
+}
+
+
+sub choose_cancel_on_next_confirmation {
+    my $self = shift;
+    $self->do_command("chooseCancelOnNextConfirmation", @_);
+}
+
+
+sub choose_ok_on_next_confirmation {
+    my $self = shift;
+    $self->do_command("chooseOkOnNextConfirmation", @_);
+}
+
+
+sub answer_on_next_prompt {
+    my $self = shift;
+    $self->do_command("answerOnNextPrompt", @_);
+}
+
+
+sub go_back {
+    my $self = shift;
+    $self->do_command("goBack", @_);
+}
+
+
+sub refresh {
+    my $self = shift;
+    $self->do_command("refresh", @_);
+}
+
+
+sub close {
+    my $self = shift;
+    $self->do_command("close", @_);
+}
+
+
+sub is_alert_present {
+    my $self = shift;
+    return $self->get_boolean("isAlertPresent", @_);
+}
+
+
+sub is_prompt_present {
+    my $self = shift;
+    return $self->get_boolean("isPromptPresent", @_);
+}
+
+
+sub is_confirmation_present {
+    my $self = shift;
+    return $self->get_boolean("isConfirmationPresent", @_);
+}
+
+
+sub get_alert {
+    my $self = shift;
+    return $self->get_string("getAlert", @_);
+}
+
+
+sub get_confirmation {
+    my $self = shift;
+    return $self->get_string("getConfirmation", @_);
+}
+
+
+sub get_prompt {
+    my $self = shift;
+    return $self->get_string("getPrompt", @_);
+}
+
+
+sub get_location {
+    my $self = shift;
+    return $self->get_string("getLocation", @_);
+}
+
+
+sub get_title {
+    my $self = shift;
+    return $self->get_string("getTitle", @_);
+}
+
+
+sub get_body_text {
+    my $self = shift;
+    return $self->get_string("getBodyText", @_);
+}
+
+
+sub get_value {
+    my $self = shift;
+    return $self->get_string("getValue", @_);
+}
+
+
+sub get_text {
+    my $self = shift;
+    return $self->get_string("getText", @_);
+}
+
+
+sub highlight {
+    my $self = shift;
+    $self->do_command("highlight", @_);
+}
+
+
+sub get_eval {
+    my $self = shift;
+    return $self->get_string("getEval", @_);
+}
+
+
+sub is_checked {
+    my $self = shift;
+    return $self->get_boolean("isChecked", @_);
+}
+
+
+sub get_table {
+    my $self = shift;
+    return $self->get_string("getTable", @_);
+}
+
+
+sub get_selected_labels {
+    my $self = shift;
+    return $self->get_string_array("getSelectedLabels", @_);
+}
+
+
+sub get_selected_label {
+    my $self = shift;
+    return $self->get_string("getSelectedLabel", @_);
+}
+
+
+sub get_selected_values {
+    my $self = shift;
+    return $self->get_string_array("getSelectedValues", @_);
+}
+
+
+sub get_selected_value {
+    my $self = shift;
+    return $self->get_string("getSelectedValue", @_);
+}
+
+
+sub get_selected_indexes {
+    my $self = shift;
+    return $self->get_string_array("getSelectedIndexes", @_);
+}
+
+
+sub get_selected_index {
+    my $self = shift;
+    return $self->get_string("getSelectedIndex", @_);
+}
+
+
+sub get_selected_ids {
+    my $self = shift;
+    return $self->get_string_array("getSelectedIds", @_);
+}
+
+
+sub get_selected_id {
+    my $self = shift;
+    return $self->get_string("getSelectedId", @_);
+}
+
+
+sub is_something_selected {
+    my $self = shift;
+    return $self->get_boolean("isSomethingSelected", @_);
+}
+
+
+sub get_select_options {
+    my $self = shift;
+    return $self->get_string_array("getSelectOptions", @_);
+}
+
+
+sub get_attribute {
+    my $self = shift;
+    return $self->get_string("getAttribute", @_);
+}
+
+
+sub is_text_present {
+    my $self = shift;
+    return $self->get_boolean("isTextPresent", @_);
+}
+
+
+sub is_element_present {
+    my $self = shift;
+    return $self->get_boolean("isElementPresent", @_);
+}
+
+
+sub is_visible {
+    my $self = shift;
+    return $self->get_boolean("isVisible", @_);
+}
+
+
+sub is_editable {
+    my $self = shift;
+    return $self->get_boolean("isEditable", @_);
+}
+
+
+sub get_all_buttons {
+    my $self = shift;
+    return $self->get_string_array("getAllButtons", @_);
+}
+
+
+sub get_all_links {
+    my $self = shift;
+    return $self->get_string_array("getAllLinks", @_);
+}
+
+
+sub get_all_fields {
+    my $self = shift;
+    return $self->get_string_array("getAllFields", @_);
+}
+
+
+sub get_attribute_from_all_windows {
+    my $self = shift;
+    return $self->get_string_array("getAttributeFromAllWindows", @_);
+}
+
+
+sub dragdrop {
+    my $self = shift;
+    $self->do_command("dragdrop", @_);
+}
+
+
+sub set_mouse_speed {
+    my $self = shift;
+    $self->do_command("setMouseSpeed", @_);
+}
+
+
+sub get_mouse_speed {
+    my $self = shift;
+    return $self->get_number("getMouseSpeed", @_);
+}
+
+
+sub drag_and_drop {
+    my $self = shift;
+    $self->do_command("dragAndDrop", @_);
+}
+
+
+sub drag_and_drop_to_object {
+    my $self = shift;
+    $self->do_command("dragAndDropToObject", @_);
+}
+
+
+sub window_focus {
+    my $self = shift;
+    $self->do_command("windowFocus", @_);
+}
+
+
+sub window_maximize {
+    my $self = shift;
+    $self->do_command("windowMaximize", @_);
+}
+
+
+sub get_all_window_ids {
+    my $self = shift;
+    return $self->get_string_array("getAllWindowIds", @_);
+}
+
+
+sub get_all_window_names {
+    my $self = shift;
+    return $self->get_string_array("getAllWindowNames", @_);
+}
+
+
+sub get_all_window_titles {
+    my $self = shift;
+    return $self->get_string_array("getAllWindowTitles", @_);
+}
+
+
+sub get_html_source {
+    my $self = shift;
+    return $self->get_string("getHtmlSource", @_);
+}
+
+
+sub set_cursor_position {
+    my $self = shift;
+    $self->do_command("setCursorPosition", @_);
+}
+
+
+sub get_element_index {
+    my $self = shift;
+    return $self->get_number("getElementIndex", @_);
+}
+
+
+sub is_ordered {
+    my $self = shift;
+    return $self->get_boolean("isOrdered", @_);
+}
+
+
+sub get_element_position_left {
+    my $self = shift;
+    return $self->get_number("getElementPositionLeft", @_);
+}
+
+
+sub get_element_position_top {
+    my $self = shift;
+    return $self->get_number("getElementPositionTop", @_);
+}
+
+
+sub get_element_width {
+    my $self = shift;
+    return $self->get_number("getElementWidth", @_);
+}
+
+
+sub get_element_height {
+    my $self = shift;
+    return $self->get_number("getElementHeight", @_);
+}
+
+
+sub get_cursor_position {
+    my $self = shift;
+    return $self->get_number("getCursorPosition", @_);
+}
+
+
+sub get_expression {
+    my $self = shift;
+    return $self->get_string("getExpression", @_);
+}
+
+
+sub get_xpath_count {
+    my $self = shift;
+    return $self->get_number("getXpathCount", @_);
+}
+
+
+sub assign_id {
+    my $self = shift;
+    $self->do_command("assignId", @_);
+}
+
+
+sub allow_native_xpath {
+    my $self = shift;
+    $self->do_command("allowNativeXpath", @_);
+}
+
+
+sub ignore_attributes_without_value {
+    my $self = shift;
+    $self->do_command("ignoreAttributesWithoutValue", @_);
+}
+
+
+sub wait_for_condition {
+    my $self = shift;
+    local $self->{_timeout} = $_[1];
+
+    $self->do_command("waitForCondition", @_);
+}
+
+
+sub set_timeout {
+    my $self = shift;
+    $self->{_timeout} = $_[0];
+
+    $self->do_command("setTimeout", @_);
+}
+
+
+sub wait_for_page_to_load {
+    my $self = shift;
+    local $self->{_timeout} = $_[1];
+
+    $self->do_command("waitForPageToLoad", @_);
+}
+
+
+sub wait_for_frame_to_load {
+    my $self = shift;
+    local $self->{_timeout} = $_[1];
+
+    $self->do_command("waitForFrameToLoad", @_);
+}
+
+
+sub get_cookie {
+    my $self = shift;
+    return $self->get_string("getCookie", @_);
+}
+
+
+sub get_cookie_by_name {
+    my $self = shift;
+    return $self->get_string("getCookieByName", @_);
+}
+
+
+sub is_cookie_present {
+    my $self = shift;
+    return $self->get_boolean("isCookiePresent", @_);
+}
+
+
+sub create_cookie {
+    my $self = shift;
+    $self->do_command("createCookie", @_);
+}
+
+
+sub delete_cookie {
+    my $self = shift;
+    $self->do_command("deleteCookie", @_);
+}
+
+
+sub delete_all_visible_cookies {
+    my $self = shift;
+    $self->do_command("deleteAllVisibleCookies", @_);
+}
+
+
+sub set_browser_log_level {
+    my $self = shift;
+    $self->do_command("setBrowserLogLevel", @_);
+}
+
+
+sub run_script {
+    my $self = shift;
+    $self->do_command("runScript", @_);
+}
+
+
+sub add_location_strategy {
+    my $self = shift;
+    $self->do_command("addLocationStrategy", @_);
+}
+
+
+sub capture_entire_page_screenshot {
+    my $self = shift;
+    $self->do_command("captureEntirePageScreenshot", @_);
+}
+
+
+sub rollup {
+    my $self = shift;
+    $self->do_command("rollup", @_);
+}
+
+
+sub add_script {
+    my $self = shift;
+    $self->do_command("addScript", @_);
+}
+
+
+sub remove_script {
+    my $self = shift;
+    $self->do_command("removeScript", @_);
+}
+
+
+sub use_xpath_library {
+    my $self = shift;
+    $self->do_command("useXpathLibrary", @_);
+}
+
+
+sub set_context {
+    my $self = shift;
+    $self->do_command("setContext", @_);
+}
+
+
+sub attach_file {
+    my $self = shift;
+    $self->do_command("attachFile", @_);
+}
+
+
+sub capture_screenshot {
+    my $self = shift;
+    $self->do_command("captureScreenshot", @_);
+}
+
+
+sub capture_screenshot_to_string {
+    my $self = shift;
+    return $self->get_string("captureScreenshotToString", @_);
+}
+
+
+sub capture_entire_page_screenshot_to_string {
+    my $self = shift;
+    return $self->get_string("captureEntirePageScreenshotToString", @_);
+}
+
+
+sub shut_down_selenium_server {
+    my $self = shift;
+    $self->do_command("shutDownSeleniumServer", @_);
+}
+
+
+sub retrieve_last_remote_control_logs {
+    my $self = shift;
+    return $self->get_string("retrieveLastRemoteControlLogs", @_);
+}
+
+
+sub key_down_native {
+    my $self = shift;
+    $self->do_command("keyDownNative", @_);
+}
+
+
+sub key_up_native {
+    my $self = shift;
+    $self->do_command("keyUpNative", @_);
+}
+
+
+sub key_press_native {
+    my $self = shift;
+    $self->do_command("keyPressNative", @_);
+}
+
+
+sub wait_for_text_present {
+    my $self = shift;
+    $self->do_command("waitForTextPresent", @_);
+}
+
+
+sub wait_for_element_present {
+    my $self = shift;
+    $self->do_command("waitForElementPresent", @_);
+}
+
+
+
+sub is_location {
+    my $self = shift;
+    warn "is_location() is deprecated, use get_location()\n"
+        unless $self->{no_deprecation_msg};
+    my $expected_location = shift;
+    my $loc = $self->get_string("getLocation");
+    return $loc =~ /\Q$expected_location\E$/;
+}
+
+
+sub get_checked {
+    my $self = shift;
+    warn "get_checked() is deprecated, use is_checked()\n"
+        unless $self->{no_deprecation_msg};
+    return $self->get_string("isChecked", @_) ? 'true' : 'false';
+}
+
+
+sub is_selected {
+    my ($self, $locator, $option_locator) = @_;
+    warn "is_selected() is deprecated, use get_selected_*() methods\n"
+        unless $self->{no_deprecation_msg};
+    $option_locator =~ m/^(?:(.+)=)?(.+)/;
+    my $selector = $1 || 'label';
+    $selector = 'indexe' if $selector eq 'index';
+    my $pattern = $2;
+    my $func = "get_selected_${selector}s";
+    my @selected = $self->$func($locator);
+    return grep { $pattern eq $_ } @selected;
+}
+
+
+sub get_selected_options {
+    my $self = shift;
+    warn "get_selected_options() is deprecated, use get_selected_labels()\n"
+        unless $self->{no_deprecation_msg};
+    return $self->get_string_array("getSelectedLabels", @_);
+}
+
+
+sub get_absolute_location {
+    my $self = shift;
+    warn "get_absolute_location() is deprecated, use get_location()\n"
+        unless $self->{no_deprecation_msg};
+    return $self->get_string("getLocation", @_);
+}
+
+
+sub DESTROY {
+    my $self = shift;
+    local $@;
+    $self->stop if $self->{auto_stop};
+}
+
+1;
+
+
+
+=pod
 
 =head1 NAME
 
 WWW::Selenium - Perl Client for the Selenium Remote Control test tool
 
+=head1 VERSION
+
+version 1.25
+
 =head1 SYNOPSIS
 
     use WWW::Selenium;
-    
-    my $sel = WWW::Selenium->new( host => "localhost", 
-                                  port => 4444, 
-                                  browser => "*iexplore", 
+
+    my $sel = WWW::Selenium->new( host => "localhost",
+                                  port => 4444,
+                                  browser => "*iexplore",
                                   browser_url => "http://www.google.com",
                                 );
-    
+
     $sel->start;
     $sel->open("http://www.google.com");
     $sel->type("q", "hello world");
@@ -68,12 +1214,6 @@ Server, you can automatically control any supported browser.
 
 To use this module, you need to have already downloaded and started
 the Selenium Server.  (The Selenium Server is a Java application.)
-
-=cut
-
-### This next part is auto-generated based on the big comment in selenium-api.js
-
-#Defines an object that runs Selenium commands.
 
 =head2 Element Locators
 
@@ -207,7 +1347,7 @@ css=span#firstChild + span
 
 =back
 
-Currently the css selector locator supports all css1, css2 and css3 selectors except namespace in css3, some pseudo classes(:nth-of-type, :nth-last-of-type, :first-of-type, :last-of-type, :only-of-type, :visited, :hover, :active, :focus, :indeterminate) and pseudo elements(::first-line, ::first-letter, ::selection, ::before, ::after). 
+Currently the css selector locator supports all css1, css2 and css3 selectors except namespace in css3, some pseudo classes(:nth-of-type, :nth-last-of-type, :first-of-type, :last-of-type, :only-of-type, :visited, :hover, :active, :focus, :indeterminate) and pseudo elements(::first-line, ::first-letter, ::selection, ::before, ::after).
 
 =item *
 
@@ -303,12 +1443,6 @@ If no pattern prefix is specified, Selenium assumes that it's a "glob"pattern.
 
 For commands that return multiple values (such as verifySelectOptions),the string being matched is a comma-separated list of the return values,where both commas and backslashes in the values are backslash-escaped.When providing a pattern, the optional matching syntax (i.e. glob,regexp, etc.) is specified once, as usual, at the beginning of thepattern.
 
-=cut
-
-eval 'require Encode';
-my $encode_present = !$@;
-Encode->import('decode_utf8') if $encode_present;
-
 =head2 METHODS
 
 The following methods are available:
@@ -357,7 +1491,7 @@ This profile will be automatically configured to use the Selenium
 Server as a proxy and to have all annoying prompts
 ("save your password?" "forms are insecure" "make Firefox your default
 browser?" disabled.  You may optionally specify
-an absolute path to your firefox executable, or just say "*firefox". 
+an absolute path to your firefox executable, or just say "*firefox".
 If no absolute path is specified, we'll look for
 firefox.exe in a default location (normally c:\program files\mozilla
 firefox\firefox.exe), which you can override by
@@ -372,7 +1506,7 @@ This process will be automatically configured to use the Selenium
 Server as a proxy and to have all annoying prompts
 ("save your password?" "forms are insecure" "make Firefox your default
 browser?" disabled.  You may optionally specify
-an absolute path to your iexplore executable, or just say "*iexplore". 
+an absolute path to your iexplore executable, or just say "*iexplore".
 If no absolute path is specified, we'll look for
 iexplore.exe in a default location (normally c:\program files\internet
 explorer\iexplore.exe), which you can override by
@@ -408,197 +1542,9 @@ Only GET and POST are supported.
 
 =back
 
-=cut
-
-sub new {
-    my ($class, %args) = @_;
-    my $self = { # default args:
-                 host => 'localhost',
-                 port => 4444,
-                 auto_stop => 1,
-                 browser_start_command => delete $args{browser} || '*firefox',
-                 _ua => undef,
-                 keep_alive => 5,
-                 http_method => 'POST',
-                 %args,
-               };
-    croak 'browser_url is mandatory!' unless $self->{browser_url};
-    croak "Unknown http_method: ($self->{http_method})"
-        unless $self->{http_method} =~ m/^GET|POST$/;
-    bless $self, $class or die "Can't bless $class: $!";
-    return $self;
-}
-
-sub start {
-    my $self = shift;
-    return if $self->{session_id};
-    $self->{session_id} = $self->get_string("getNewBrowserSession", 
-                                            $self->{browser_start_command}, 
-                                            $self->{browser_url});
-}
-
-sub stop {
-    my $self = shift;
-    return unless defined $self->{session_id};
-    $self->do_command("testComplete");
-    $self->{session_id} = undef;
-}
-
-sub do_command {
-    my ($self, $command, @args) = @_;
-    my $get = $self->{http_method} eq 'GET';
-
-    $self->{_page_opened} = 1 if $command eq 'open';
-
-    # Check that user has called open()
-    my %valid_pre_open_commands = (
-        testComplete => 1,
-        getNewBrowserSession => 1,
-        setTimeout => 1,
-    );
-    if (!$self->{_page_opened} and !$valid_pre_open_commands{$command}) {
-        die "You must open a page before calling $command. eg: \$sel->open('/');\n";
-    }
-
-    my $fullurl = "http://$self->{host}:$self->{port}/selenium-server/driver/";
-    $fullurl .= '?' if $get;
-    my $content = '';
-
-    my $i = 1;
-    @args = grep defined, @args;
-    my $params = $get ? \$fullurl : \$content;
-    $$params .= "cmd=" . uri_escape($command);
-    while (@args) {
-        $$params .= '&' . $i++ . '=' . URI::Escape::uri_escape_utf8(shift @args);
-    }
-    if (defined $self->{session_id}) {
-        $$params .= "&sessionId=$self->{session_id}";
-    }
-    # We use the full version of LWP to make sure we issue an 
-    # HTTP 1.1 request (SRC-25)
-    
-    my $method = $get ? 'GET' : 'POST';
-    print "---> Requesting $method $fullurl ($content)\n" if $self->{verbose};
-    my $header = HTTP::Headers->new(
-        $get ? () : (
-            Content_Type => 'application/x-www-form-urlencoded; charset=utf-8'
-        )
-    );
-    my $response = $self->ua->request( 
-        HTTP::Request->new($method => $fullurl, $header, $content) );
-    my $result;
-    if ($response->is_success) {
-        $result = $response->content;
-        print "Got result: $result\n" if $self->{verbose};
-    }
-    else {
-        die "Error requesting $fullurl:\n" . $response->status_line . "\n";
-    }
-    $result = decode_utf8($result) if $encode_present;
-    die "Error requesting $fullurl:\n$result\n" unless $result =~ /^OK/;
-    return $result;
-}
-
-sub ua {
-    my $self = shift;
-
-    $self->{_ua} ||= LWP::UserAgent->new(keep_alive => $self->{keep_alive});
-
-    if (my $msec = $self->{_timeout}) {
-        # Keep the 3 minute timeout (LWP::UserAgent default) on top of the
-        # selenium timeout
-        $self->{_ua}->timeout( int($msec/1000 + 180) );
-    }
-    return $self->{_ua};
-}
-
-sub get_string {
-    my $self = shift;
-    my $result = $self->do_command(@_);
-    return substr($result, 3);
-}
-
-sub get_string_array {
-    my $self = shift;
-    my $result = $self->get_string(@_);
-    my $token = "";
-    my @tokens = ();
-    my @chars = split(//, $result);
-    for (my $i = 0; $i < @chars; $i++) {
-        my $char = $chars[$i];
-        if ($char eq '\\') {
-            $i++;
-            $char = $chars[$i];
-            $token .= $char;
-        } elsif ($char eq ',') {
-            push (@tokens, $token);
-            $token = "";
-        } else {
-            $token .= $char;
-        }
-    }
-    push (@tokens, $token);
-    return @tokens;
-}
-
-sub get_number {
-    my $self = shift;
-    my $result = $self->get_string(@_);
-    # Is there something else I need to do here?
-    return $result;
-}
-
-sub get_number_array {
-    my $self = shift;
-    my @result = $self->get_string_array(@_);
-    # Is there something else I need to do here?
-    return @result;
-}
-
-sub get_boolean {
-    my $self = shift;
-    my $result = $self->get_string(@_);
-    if ($result eq "true") {
-        return 1;
-    }
-    if ($result eq "false") {
-        return 0;
-    }
-    die "result is neither 'true' nor 'false': $result";
-}
-
-sub get_boolean_array {
-    my $self = shift;
-    my @result = $self->get_string_array(@_);
-    my @boolarr = ();
-    for (my $i = 0; $i < @result; $i++) {
-        if ($result[$i] eq "true") {
-            push (@boolarr, 1);
-            next;
-        }
-        if ($result[$i] eq "false") {
-            push (@boolarr, 0);
-            next;
-        }
-        die "result is neither 'true' nor 'false': ". $result[$i];
-    }
-    return @boolarr;
-}
-
 =item $sel-E<gt>pause($timeout)
 
 Waits $timeout milliseconds (default: 1 second)
-
-=cut
-
-sub pause {
-    my ($self,$timeout) = @_;
-    $timeout = 1000  unless defined $timeout;
-    $timeout /= 1000;
-    sleep $timeout;
-}
-
-### From here on, everything's auto-generated from XML
 
 =item $sel-E<gt>click($locator)
 
@@ -610,13 +1556,6 @@ Clicks on a link, button, checkbox or radio button. If the click actioncauses a 
 
 =back
 
-=cut
-
-sub click {
-    my $self = shift;
-    $self->do_command("click", @_);
-}
-
 =item $sel-E<gt>double_click($locator)
 
 Double clicks on a link, button, checkbox or radio button. If the double click actioncauses a new page to load (like a link usually does), callwaitForPageToLoad.
@@ -627,13 +1566,6 @@ Double clicks on a link, button, checkbox or radio button. If the double click a
 
 =back
 
-=cut
-
-sub double_click {
-    my $self = shift;
-    $self->do_command("doubleClick", @_);
-}
-
 =item $sel-E<gt>context_menu($locator)
 
 Simulates opening the context menu for the specified element (as might happen if the user "right-clicked" on the element).
@@ -643,13 +1575,6 @@ Simulates opening the context menu for the specified element (as might happen if
 =item $locator is an element locator
 
 =back
-
-=cut
-
-sub context_menu {
-    my $self = shift;
-    $self->do_command("contextMenu", @_);
-}
 
 =item $sel-E<gt>click_at($locator, $coord_string)
 
@@ -663,13 +1588,6 @@ Clicks on a link, button, checkbox or radio button. If the click actioncauses a 
 
 =back
 
-=cut
-
-sub click_at {
-    my $self = shift;
-    $self->do_command("clickAt", @_);
-}
-
 =item $sel-E<gt>double_click_at($locator, $coord_string)
 
 Doubleclicks on a link, button, checkbox or radio button. If the actioncauses a new page to load (like a link usually does), callwaitForPageToLoad.
@@ -681,13 +1599,6 @@ Doubleclicks on a link, button, checkbox or radio button. If the actioncauses a 
 =item $coord_string is specifies the x,y position (i.e. - 10,20) of the mouse      event relative to the element returned by the locator.
 
 =back
-
-=cut
-
-sub double_click_at {
-    my $self = shift;
-    $self->do_command("doubleClickAt", @_);
-}
 
 =item $sel-E<gt>context_menu_at($locator, $coord_string)
 
@@ -701,13 +1612,6 @@ Simulates opening the context menu for the specified element (as might happen if
 
 =back
 
-=cut
-
-sub context_menu_at {
-    my $self = shift;
-    $self->do_command("contextMenuAt", @_);
-}
-
 =item $sel-E<gt>fire_event($locator, $event_name)
 
 Explicitly simulate an event, to trigger the corresponding "onI<event>"handler.
@@ -720,13 +1624,6 @@ Explicitly simulate an event, to trigger the corresponding "onI<event>"handler.
 
 =back
 
-=cut
-
-sub fire_event {
-    my $self = shift;
-    $self->do_command("fireEvent", @_);
-}
-
 =item $sel-E<gt>focus($locator)
 
 Move the focus to the specified element; for example, if the element is an input field, move the cursor to that field.
@@ -736,13 +1633,6 @@ Move the focus to the specified element; for example, if the element is an input
 =item $locator is an element locator
 
 =back
-
-=cut
-
-sub focus {
-    my $self = shift;
-    $self->do_command("focus", @_);
-}
 
 =item $sel-E<gt>key_press($locator, $key_sequence)
 
@@ -756,100 +1646,37 @@ Simulates a user pressing and releasing a key.
 
 =back
 
-=cut
-
-sub key_press {
-    my $self = shift;
-    $self->do_command("keyPress", @_);
-}
-
 =item $sel-E<gt>shift_key_down()
 
 Press the shift key and hold it down until doShiftUp() is called or a new page is loaded.
-
-=cut
-
-sub shift_key_down {
-    my $self = shift;
-    $self->do_command("shiftKeyDown", @_);
-}
 
 =item $sel-E<gt>shift_key_up()
 
 Release the shift key.
 
-=cut
-
-sub shift_key_up {
-    my $self = shift;
-    $self->do_command("shiftKeyUp", @_);
-}
-
 =item $sel-E<gt>meta_key_down()
 
 Press the meta key and hold it down until doMetaUp() is called or a new page is loaded.
-
-=cut
-
-sub meta_key_down {
-    my $self = shift;
-    $self->do_command("metaKeyDown", @_);
-}
 
 =item $sel-E<gt>meta_key_up()
 
 Release the meta key.
 
-=cut
-
-sub meta_key_up {
-    my $self = shift;
-    $self->do_command("metaKeyUp", @_);
-}
-
 =item $sel-E<gt>alt_key_down()
 
 Press the alt key and hold it down until doAltUp() is called or a new page is loaded.
-
-=cut
-
-sub alt_key_down {
-    my $self = shift;
-    $self->do_command("altKeyDown", @_);
-}
 
 =item $sel-E<gt>alt_key_up()
 
 Release the alt key.
 
-=cut
-
-sub alt_key_up {
-    my $self = shift;
-    $self->do_command("altKeyUp", @_);
-}
-
 =item $sel-E<gt>control_key_down()
 
 Press the control key and hold it down until doControlUp() is called or a new page is loaded.
 
-=cut
-
-sub control_key_down {
-    my $self = shift;
-    $self->do_command("controlKeyDown", @_);
-}
-
 =item $sel-E<gt>control_key_up()
 
 Release the control key.
-
-=cut
-
-sub control_key_up {
-    my $self = shift;
-    $self->do_command("controlKeyUp", @_);
-}
 
 =item $sel-E<gt>key_down($locator, $key_sequence)
 
@@ -863,13 +1690,6 @@ Simulates a user pressing a key (without releasing it yet).
 
 =back
 
-=cut
-
-sub key_down {
-    my $self = shift;
-    $self->do_command("keyDown", @_);
-}
-
 =item $sel-E<gt>key_up($locator, $key_sequence)
 
 Simulates a user releasing a key.
@@ -882,13 +1702,6 @@ Simulates a user releasing a key.
 
 =back
 
-=cut
-
-sub key_up {
-    my $self = shift;
-    $self->do_command("keyUp", @_);
-}
-
 =item $sel-E<gt>mouse_over($locator)
 
 Simulates a user hovering a mouse over the specified element.
@@ -898,13 +1711,6 @@ Simulates a user hovering a mouse over the specified element.
 =item $locator is an element locator
 
 =back
-
-=cut
-
-sub mouse_over {
-    my $self = shift;
-    $self->do_command("mouseOver", @_);
-}
 
 =item $sel-E<gt>mouse_out($locator)
 
@@ -916,13 +1722,6 @@ Simulates a user moving the mouse pointer away from the specified element.
 
 =back
 
-=cut
-
-sub mouse_out {
-    my $self = shift;
-    $self->do_command("mouseOut", @_);
-}
-
 =item $sel-E<gt>mouse_down($locator)
 
 Simulates a user pressing the left mouse button (without releasing it yet) onthe specified element.
@@ -933,13 +1732,6 @@ Simulates a user pressing the left mouse button (without releasing it yet) onthe
 
 =back
 
-=cut
-
-sub mouse_down {
-    my $self = shift;
-    $self->do_command("mouseDown", @_);
-}
-
 =item $sel-E<gt>mouse_down_right($locator)
 
 Simulates a user pressing the right mouse button (without releasing it yet) onthe specified element.
@@ -949,13 +1741,6 @@ Simulates a user pressing the right mouse button (without releasing it yet) onth
 =item $locator is an element locator
 
 =back
-
-=cut
-
-sub mouse_down_right {
-    my $self = shift;
-    $self->do_command("mouseDownRight", @_);
-}
 
 =item $sel-E<gt>mouse_down_at($locator, $coord_string)
 
@@ -969,13 +1754,6 @@ Simulates a user pressing the left mouse button (without releasing it yet) atthe
 
 =back
 
-=cut
-
-sub mouse_down_at {
-    my $self = shift;
-    $self->do_command("mouseDownAt", @_);
-}
-
 =item $sel-E<gt>mouse_down_right_at($locator, $coord_string)
 
 Simulates a user pressing the right mouse button (without releasing it yet) atthe specified location.
@@ -988,13 +1766,6 @@ Simulates a user pressing the right mouse button (without releasing it yet) atth
 
 =back
 
-=cut
-
-sub mouse_down_right_at {
-    my $self = shift;
-    $self->do_command("mouseDownRightAt", @_);
-}
-
 =item $sel-E<gt>mouse_up($locator)
 
 Simulates the event that occurs when the user releases the mouse button (i.e., stopsholding the button down) on the specified element.
@@ -1005,13 +1776,6 @@ Simulates the event that occurs when the user releases the mouse button (i.e., s
 
 =back
 
-=cut
-
-sub mouse_up {
-    my $self = shift;
-    $self->do_command("mouseUp", @_);
-}
-
 =item $sel-E<gt>mouse_up_right($locator)
 
 Simulates the event that occurs when the user releases the right mouse button (i.e., stopsholding the button down) on the specified element.
@@ -1021,13 +1785,6 @@ Simulates the event that occurs when the user releases the right mouse button (i
 =item $locator is an element locator
 
 =back
-
-=cut
-
-sub mouse_up_right {
-    my $self = shift;
-    $self->do_command("mouseUpRight", @_);
-}
 
 =item $sel-E<gt>mouse_up_at($locator, $coord_string)
 
@@ -1041,13 +1798,6 @@ Simulates the event that occurs when the user releases the mouse button (i.e., s
 
 =back
 
-=cut
-
-sub mouse_up_at {
-    my $self = shift;
-    $self->do_command("mouseUpAt", @_);
-}
-
 =item $sel-E<gt>mouse_up_right_at($locator, $coord_string)
 
 Simulates the event that occurs when the user releases the right mouse button (i.e., stopsholding the button down) at the specified location.
@@ -1060,13 +1810,6 @@ Simulates the event that occurs when the user releases the right mouse button (i
 
 =back
 
-=cut
-
-sub mouse_up_right_at {
-    my $self = shift;
-    $self->do_command("mouseUpRightAt", @_);
-}
-
 =item $sel-E<gt>mouse_move($locator)
 
 Simulates a user pressing the mouse button (without releasing it yet) onthe specified element.
@@ -1076,13 +1819,6 @@ Simulates a user pressing the mouse button (without releasing it yet) onthe spec
 =item $locator is an element locator
 
 =back
-
-=cut
-
-sub mouse_move {
-    my $self = shift;
-    $self->do_command("mouseMove", @_);
-}
 
 =item $sel-E<gt>mouse_move_at($locator, $coord_string)
 
@@ -1096,13 +1832,6 @@ Simulates a user pressing the mouse button (without releasing it yet) onthe spec
 
 =back
 
-=cut
-
-sub mouse_move_at {
-    my $self = shift;
-    $self->do_command("mouseMoveAt", @_);
-}
-
 =item $sel-E<gt>type($locator, $value)
 
 Sets the value of an input field, as though you typed it in.
@@ -1115,13 +1844,6 @@ Can also be used to set the value of combo boxes, check boxes, etc. In these cas
 =item $value is the value to type
 
 =back
-
-=cut
-
-sub type {
-    my $self = shift;
-    $self->do_command("type", @_);
-}
 
 =item $sel-E<gt>type_keys($locator, $value)
 
@@ -1140,13 +1862,6 @@ In some cases, you may need to use the simple "type" command to set the value of
 
 =back
 
-=cut
-
-sub type_keys {
-    my $self = shift;
-    $self->do_command("typeKeys", @_);
-}
-
 =item $sel-E<gt>set_speed($value)
 
 Set execution speed (i.e., set the millisecond length of a delay which will follow each selenium operation).  By default, there is no such delay, i.e.,the delay is 0 milliseconds.
@@ -1156,13 +1871,6 @@ Set execution speed (i.e., set the millisecond length of a delay which will foll
 =item $value is the number of milliseconds to pause after operation
 
 =back
-
-=cut
-
-sub set_speed {
-    my $self = shift;
-    $self->do_command("setSpeed", @_);
-}
 
 =item $sel-E<gt>get_speed()
 
@@ -1174,13 +1882,6 @@ Get execution speed (i.e., get the millisecond length of the delay following eac
 
 =back
 
-=cut
-
-sub get_speed {
-    my $self = shift;
-    return $self->get_string("getSpeed", @_);
-}
-
 =item $sel-E<gt>check($locator)
 
 Check a toggle-button (checkbox/radio)
@@ -1191,13 +1892,6 @@ Check a toggle-button (checkbox/radio)
 
 =back
 
-=cut
-
-sub check {
-    my $self = shift;
-    $self->do_command("check", @_);
-}
-
 =item $sel-E<gt>uncheck($locator)
 
 Uncheck a toggle-button (checkbox/radio)
@@ -1207,13 +1901,6 @@ Uncheck a toggle-button (checkbox/radio)
 =item $locator is an element locator
 
 =back
-
-=cut
-
-sub uncheck {
-    my $self = shift;
-    $self->do_command("uncheck", @_);
-}
 
 =item $sel-E<gt>select($select_locator, $option_locator)
 
@@ -1282,13 +1969,6 @@ If no option locator prefix is provided, the default behaviour is to match on B<
 
 =back
 
-=cut
-
-sub select {
-    my $self = shift;
-    $self->do_command("select", @_);
-}
-
 =item $sel-E<gt>add_selection($locator, $option_locator)
 
 Add a selection to the set of selected options in a multi-select element using an option locator.@see #doSelect for details of option locators
@@ -1300,13 +1980,6 @@ Add a selection to the set of selected options in a multi-select element using a
 =item $option_locator is an option locator (a label by default)
 
 =back
-
-=cut
-
-sub add_selection {
-    my $self = shift;
-    $self->do_command("addSelection", @_);
-}
 
 =item $sel-E<gt>remove_selection($locator, $option_locator)
 
@@ -1320,13 +1993,6 @@ Remove a selection from the set of selected options in a multi-select element us
 
 =back
 
-=cut
-
-sub remove_selection {
-    my $self = shift;
-    $self->do_command("removeSelection", @_);
-}
-
 =item $sel-E<gt>remove_all_selections($locator)
 
 Unselects all of the selected options in a multi-select element.
@@ -1336,13 +2002,6 @@ Unselects all of the selected options in a multi-select element.
 =item $locator is an element locator identifying a multi-select box
 
 =back
-
-=cut
-
-sub remove_all_selections {
-    my $self = shift;
-    $self->do_command("removeAllSelections", @_);
-}
 
 =item $sel-E<gt>submit($form_locator)
 
@@ -1354,13 +2013,6 @@ Submit the specified form. This is particularly useful for forms withoutsubmit b
 
 =back
 
-=cut
-
-sub submit {
-    my $self = shift;
-    $self->do_command("submit", @_);
-}
-
 =item $sel-E<gt>open($url)
 
 Opens an URL in the test frame. This accepts both relative and absoluteURLs.The "open" command waits for the page to load before proceeding,ie. the "AndWait" suffix is implicit.I<Note>: The URL must be on the same domain as the runner HTMLdue to security restrictions in the browser (Same Origin Policy). If youneed to open an URL on another domain, use the Selenium Server to start anew browser session on that domain.
@@ -1370,15 +2022,6 @@ Opens an URL in the test frame. This accepts both relative and absoluteURLs.The 
 =item $url is the URL to open; may be relative or absolute
 
 =back
-
-=cut
-
-sub open {
-    my $self = shift;
-    $_[0] ||= '/'; # default to opening site root
-
-    $self->do_command("open", @_);
-}
 
 =item $sel-E<gt>open_window($url, $window_id)
 
@@ -1392,13 +2035,6 @@ This command can also be a useful workaround for bug SEL-339.  In some cases, Se
 =item $window_id is the JavaScript window ID of the window to select
 
 =back
-
-=cut
-
-sub open_window {
-    my $self = shift;
-    $self->do_command("openWindow", @_);
-}
 
 =item $sel-E<gt>select_window($window_id)
 
@@ -1443,13 +2079,6 @@ In some cases, Selenium will be unable to intercept a call to window.open (if th
 
 =back
 
-=cut
-
-sub select_window {
-    my $self = shift;
-    $self->do_command("selectWindow", @_);
-}
-
 =item $sel-E<gt>select_pop_up($window_id)
 
 Simplifies the process of selecting a popup window (and does not offerfunctionality beyond what C<selectWindow()> already provides).
@@ -1472,23 +2101,9 @@ Otherwise, the window will be looked up consideringC<windowID> as the following 
 
 =back
 
-=cut
-
-sub select_pop_up {
-    my $self = shift;
-    $self->do_command("selectPopUp", @_);
-}
-
 =item $sel-E<gt>deselect_pop_up()
 
 Selects the main window. Functionally equivalent to usingC<selectWindow()> and specifying no value forC<windowID>.
-
-=cut
-
-sub deselect_pop_up {
-    my $self = shift;
-    $self->do_command("deselectPopUp", @_);
-}
 
 =item $sel-E<gt>select_frame($locator)
 
@@ -1500,13 +2115,6 @@ You may also use a DOM expression to identify the frame you want directly,like t
 =item $locator is an element locator identifying a frame or iframe
 
 =back
-
-=cut
-
-sub select_frame {
-    my $self = shift;
-    $self->do_command("selectFrame", @_);
-}
 
 =item $sel-E<gt>get_whether_this_frame_match_frame_expression($current_frame_string, $target)
 
@@ -1527,13 +2135,6 @@ This is useful in proxy injection mode, where this code runs in everybrowser fra
 
 =back
 
-=cut
-
-sub get_whether_this_frame_match_frame_expression {
-    my $self = shift;
-    return $self->get_boolean("getWhetherThisFrameMatchFrameExpression", @_);
-}
-
 =item $sel-E<gt>get_whether_this_window_match_window_expression($current_window_string, $target)
 
 Determine whether currentWindowString plus target identify the window containing this running code.
@@ -1553,13 +2154,6 @@ This is useful in proxy injection mode, where this code runs in everybrowser fra
 
 =back
 
-=cut
-
-sub get_whether_this_window_match_window_expression {
-    my $self = shift;
-    return $self->get_boolean("getWhetherThisWindowMatchWindowExpression", @_);
-}
-
 =item $sel-E<gt>wait_for_pop_up($window_id, $timeout)
 
 Waits for a popup window to appear and load up.
@@ -1572,40 +2166,17 @@ Waits for a popup window to appear and load up.
 
 =back
 
-=cut
-
-sub wait_for_pop_up {
-    my $self = shift;
-    local $self->{_timeout} = $_[1];
-
-    $self->do_command("waitForPopUp", @_);
-}
-
 =item $sel-E<gt>choose_cancel_on_next_confirmation()
 
 By default, Selenium's overridden window.confirm() function willreturn true, as if the user had manually clicked OK; after runningthis command, the next call to confirm() will return false, as ifthe user had clicked Cancel.  Selenium will then resume using thedefault behavior for future confirmations, automatically returning true (OK) unless/until you explicitly call this command for eachconfirmation.
 
 Take note - every time a confirmation comes up, you mustconsume it with a corresponding getConfirmation, or elsethe next selenium operation will fail.
 
-=cut
-
-sub choose_cancel_on_next_confirmation {
-    my $self = shift;
-    $self->do_command("chooseCancelOnNextConfirmation", @_);
-}
-
 =item $sel-E<gt>choose_ok_on_next_confirmation()
 
 Undo the effect of calling chooseCancelOnNextConfirmation.  Notethat Selenium's overridden window.confirm() function will normally automaticallyreturn true, as if the user had manually clicked OK, so you shouldn'tneed to use this command unless for some reason you need to changeyour mind prior to the next confirmation.  After any confirmation, Selenium will resume using thedefault behavior for future confirmations, automatically returning true (OK) unless/until you explicitly call chooseCancelOnNextConfirmation for eachconfirmation.
 
 Take note - every time a confirmation comes up, you mustconsume it with a corresponding getConfirmation, or elsethe next selenium operation will fail.
-
-=cut
-
-sub choose_ok_on_next_confirmation {
-    my $self = shift;
-    $self->do_command("chooseOkOnNextConfirmation", @_);
-}
 
 =item $sel-E<gt>answer_on_next_prompt($answer)
 
@@ -1617,45 +2188,17 @@ Instructs Selenium to return the specified answer string in response tothe next 
 
 =back
 
-=cut
-
-sub answer_on_next_prompt {
-    my $self = shift;
-    $self->do_command("answerOnNextPrompt", @_);
-}
-
 =item $sel-E<gt>go_back()
 
 Simulates the user clicking the "back" button on their browser.
-
-=cut
-
-sub go_back {
-    my $self = shift;
-    $self->do_command("goBack", @_);
-}
 
 =item $sel-E<gt>refresh()
 
 Simulates the user clicking the "Refresh" button on their browser.
 
-=cut
-
-sub refresh {
-    my $self = shift;
-    $self->do_command("refresh", @_);
-}
-
 =item $sel-E<gt>close()
 
 Simulates the user clicking the "close" button in the titlebar of a popupwindow or tab.
-
-=cut
-
-sub close {
-    my $self = shift;
-    $self->do_command("close", @_);
-}
 
 =item $sel-E<gt>is_alert_present()
 
@@ -1668,13 +2211,6 @@ This function never throws an exception
 
 =back
 
-=cut
-
-sub is_alert_present {
-    my $self = shift;
-    return $self->get_boolean("isAlertPresent", @_);
-}
-
 =item $sel-E<gt>is_prompt_present()
 
 Has a prompt occurred?
@@ -1686,13 +2222,6 @@ This function never throws an exception
 
 =back
 
-=cut
-
-sub is_prompt_present {
-    my $self = shift;
-    return $self->get_boolean("isPromptPresent", @_);
-}
-
 =item $sel-E<gt>is_confirmation_present()
 
 Has confirm() been called?
@@ -1703,13 +2232,6 @@ This function never throws an exception
 =item Returns true if there is a pending confirmation
 
 =back
-
-=cut
-
-sub is_confirmation_present {
-    my $self = shift;
-    return $self->get_boolean("isConfirmationPresent", @_);
-}
 
 =item $sel-E<gt>get_alert()
 
@@ -1726,17 +2248,10 @@ Selenium does NOT support JavaScript alerts that are generated in apage's onload
 
 =back
 
-=cut
-
-sub get_alert {
-    my $self = shift;
-    return $self->get_string("getAlert", @_);
-}
-
 =item $sel-E<gt>get_confirmation()
 
 Retrieves the message of a JavaScript confirmation dialog generated duringthe previous action.
-By default, the confirm function will return true, having the same effectas manually clicking OK. This can be changed by prior execution of thechooseCancelOnNextConfirmation command. 
+By default, the confirm function will return true, having the same effectas manually clicking OK. This can be changed by prior execution of thechooseCancelOnNextConfirmation command.
 
 If an confirmation is generated but you do not consume it with getConfirmation,the next Selenium action will fail.
 
@@ -1749,13 +2264,6 @@ NOTE: Selenium does NOT support JavaScript confirmations that aregenerated in a 
 =item Returns the message of the most recent JavaScript confirmation dialog
 
 =back
-
-=cut
-
-sub get_confirmation {
-    my $self = shift;
-    return $self->get_string("getConfirmation", @_);
-}
 
 =item $sel-E<gt>get_prompt()
 
@@ -1772,13 +2280,6 @@ NOTE: Selenium does NOT support JavaScript prompts that are generated in apage's
 
 =back
 
-=cut
-
-sub get_prompt {
-    my $self = shift;
-    return $self->get_string("getPrompt", @_);
-}
-
 =item $sel-E<gt>get_location()
 
 Gets the absolute URL of the current page.
@@ -1788,13 +2289,6 @@ Gets the absolute URL of the current page.
 =item Returns the absolute URL of the current page
 
 =back
-
-=cut
-
-sub get_location {
-    my $self = shift;
-    return $self->get_string("getLocation", @_);
-}
 
 =item $sel-E<gt>get_title()
 
@@ -1806,13 +2300,6 @@ Gets the title of the current page.
 
 =back
 
-=cut
-
-sub get_title {
-    my $self = shift;
-    return $self->get_string("getTitle", @_);
-}
-
 =item $sel-E<gt>get_body_text()
 
 Gets the entire text of the page.
@@ -1822,13 +2309,6 @@ Gets the entire text of the page.
 =item Returns the entire text of the page
 
 =back
-
-=cut
-
-sub get_body_text {
-    my $self = shift;
-    return $self->get_string("getBodyText", @_);
-}
 
 =item $sel-E<gt>get_value($locator)
 
@@ -1846,13 +2326,6 @@ Gets the (whitespace-trimmed) value of an input field (or anything else with a v
 
 =back
 
-=cut
-
-sub get_value {
-    my $self = shift;
-    return $self->get_string("getValue", @_);
-}
-
 =item $sel-E<gt>get_text($locator)
 
 Gets the text of an element. This works for any element that containstext. This command uses either the textContent (Mozilla-like browsers) orthe innerText (IE-like browsers) of the element, which is the renderedtext shown to the user.
@@ -1869,13 +2342,6 @@ Gets the text of an element. This works for any element that containstext. This 
 
 =back
 
-=cut
-
-sub get_text {
-    my $self = shift;
-    return $self->get_string("getText", @_);
-}
-
 =item $sel-E<gt>highlight($locator)
 
 Briefly changes the backgroundColor of the specified element yellow.  Useful for debugging.
@@ -1885,13 +2351,6 @@ Briefly changes the backgroundColor of the specified element yellow.  Useful for
 =item $locator is an element locator
 
 =back
-
-=cut
-
-sub highlight {
-    my $self = shift;
-    $self->do_command("highlight", @_);
-}
 
 =item $sel-E<gt>get_eval($script)
 
@@ -1912,13 +2371,6 @@ If you need to usea locator to refer to a single element in your application pag
 
 =back
 
-=cut
-
-sub get_eval {
-    my $self = shift;
-    return $self->get_string("getEval", @_);
-}
-
 =item $sel-E<gt>is_checked($locator)
 
 Gets whether a toggle-button (checkbox/radio) is checked.  Fails if the specified element doesn't exist or isn't a toggle-button.
@@ -1934,13 +2386,6 @@ Gets whether a toggle-button (checkbox/radio) is checked.  Fails if the specifie
 =item Returns true if the checkbox is checked, false otherwise
 
 =back
-
-=cut
-
-sub is_checked {
-    my $self = shift;
-    return $self->get_boolean("isChecked", @_);
-}
 
 =item $sel-E<gt>get_table($table_cell_address)
 
@@ -1958,13 +2403,6 @@ Gets the text from a cell of a table. The cellAddress syntaxtableLocator.row.col
 
 =back
 
-=cut
-
-sub get_table {
-    my $self = shift;
-    return $self->get_string("getTable", @_);
-}
-
 =item $sel-E<gt>get_selected_labels($select_locator)
 
 Gets all option labels (visible text) for selected options in the specified select or multi-select element.
@@ -1980,13 +2418,6 @@ Gets all option labels (visible text) for selected options in the specified sele
 =item Returns an array of all selected option labels in the specified select drop-down
 
 =back
-
-=cut
-
-sub get_selected_labels {
-    my $self = shift;
-    return $self->get_string_array("getSelectedLabels", @_);
-}
 
 =item $sel-E<gt>get_selected_label($select_locator)
 
@@ -2004,13 +2435,6 @@ Gets option label (visible text) for selected option in the specified select ele
 
 =back
 
-=cut
-
-sub get_selected_label {
-    my $self = shift;
-    return $self->get_string("getSelectedLabel", @_);
-}
-
 =item $sel-E<gt>get_selected_values($select_locator)
 
 Gets all option values (value attributes) for selected options in the specified select or multi-select element.
@@ -2026,13 +2450,6 @@ Gets all option values (value attributes) for selected options in the specified 
 =item Returns an array of all selected option values in the specified select drop-down
 
 =back
-
-=cut
-
-sub get_selected_values {
-    my $self = shift;
-    return $self->get_string_array("getSelectedValues", @_);
-}
 
 =item $sel-E<gt>get_selected_value($select_locator)
 
@@ -2050,13 +2467,6 @@ Gets option value (value attribute) for selected option in the specified select 
 
 =back
 
-=cut
-
-sub get_selected_value {
-    my $self = shift;
-    return $self->get_string("getSelectedValue", @_);
-}
-
 =item $sel-E<gt>get_selected_indexes($select_locator)
 
 Gets all option indexes (option number, starting at 0) for selected options in the specified select or multi-select element.
@@ -2072,13 +2482,6 @@ Gets all option indexes (option number, starting at 0) for selected options in t
 =item Returns an array of all selected option indexes in the specified select drop-down
 
 =back
-
-=cut
-
-sub get_selected_indexes {
-    my $self = shift;
-    return $self->get_string_array("getSelectedIndexes", @_);
-}
 
 =item $sel-E<gt>get_selected_index($select_locator)
 
@@ -2096,13 +2499,6 @@ Gets option index (option number, starting at 0) for selected option in the spec
 
 =back
 
-=cut
-
-sub get_selected_index {
-    my $self = shift;
-    return $self->get_string("getSelectedIndex", @_);
-}
-
 =item $sel-E<gt>get_selected_ids($select_locator)
 
 Gets all option element IDs for selected options in the specified select or multi-select element.
@@ -2118,13 +2514,6 @@ Gets all option element IDs for selected options in the specified select or mult
 =item Returns an array of all selected option IDs in the specified select drop-down
 
 =back
-
-=cut
-
-sub get_selected_ids {
-    my $self = shift;
-    return $self->get_string_array("getSelectedIds", @_);
-}
 
 =item $sel-E<gt>get_selected_id($select_locator)
 
@@ -2142,13 +2531,6 @@ Gets option element ID for selected option in the specified select element.
 
 =back
 
-=cut
-
-sub get_selected_id {
-    my $self = shift;
-    return $self->get_string("getSelectedId", @_);
-}
-
 =item $sel-E<gt>is_something_selected($select_locator)
 
 Determines whether some option in a drop-down menu is selected.
@@ -2164,13 +2546,6 @@ Determines whether some option in a drop-down menu is selected.
 =item Returns true if some option has been selected, false otherwise
 
 =back
-
-=cut
-
-sub is_something_selected {
-    my $self = shift;
-    return $self->get_boolean("isSomethingSelected", @_);
-}
 
 =item $sel-E<gt>get_select_options($select_locator)
 
@@ -2188,13 +2563,6 @@ Gets all option labels in the specified select drop-down.
 
 =back
 
-=cut
-
-sub get_select_options {
-    my $self = shift;
-    return $self->get_string_array("getSelectOptions", @_);
-}
-
 =item $sel-E<gt>get_attribute($attribute_locator)
 
 Gets the value of an element attribute. The value of the attribute maydiffer across browsers (this is the case for the "style" attribute, forexample).
@@ -2210,13 +2578,6 @@ Gets the value of an element attribute. The value of the attribute maydiffer acr
 =item Returns the value of the specified attribute
 
 =back
-
-=cut
-
-sub get_attribute {
-    my $self = shift;
-    return $self->get_string("getAttribute", @_);
-}
 
 =item $sel-E<gt>is_text_present($pattern)
 
@@ -2234,13 +2595,6 @@ Verifies that the specified text pattern appears somewhere on the rendered page 
 
 =back
 
-=cut
-
-sub is_text_present {
-    my $self = shift;
-    return $self->get_boolean("isTextPresent", @_);
-}
-
 =item $sel-E<gt>is_element_present($locator)
 
 Verifies that the specified element is somewhere on the page.
@@ -2256,13 +2610,6 @@ Verifies that the specified element is somewhere on the page.
 =item Returns true if the element is present, false otherwise
 
 =back
-
-=cut
-
-sub is_element_present {
-    my $self = shift;
-    return $self->get_boolean("isElementPresent", @_);
-}
 
 =item $sel-E<gt>is_visible($locator)
 
@@ -2280,13 +2627,6 @@ Determines if the specified element is visible. Anelement can be rendered invisi
 
 =back
 
-=cut
-
-sub is_visible {
-    my $self = shift;
-    return $self->get_boolean("isVisible", @_);
-}
-
 =item $sel-E<gt>is_editable($locator)
 
 Determines whether the specified input element is editable, ie hasn't been disabled.This method will fail if the specified element isn't an input element.
@@ -2303,13 +2643,6 @@ Determines whether the specified input element is editable, ie hasn't been disab
 
 =back
 
-=cut
-
-sub is_editable {
-    my $self = shift;
-    return $self->get_boolean("isEditable", @_);
-}
-
 =item $sel-E<gt>get_all_buttons()
 
 Returns the IDs of all buttons on the page.
@@ -2320,13 +2653,6 @@ If a given button has no ID, it will appear as "" in this array.
 =item Returns the IDs of all buttons on the page
 
 =back
-
-=cut
-
-sub get_all_buttons {
-    my $self = shift;
-    return $self->get_string_array("getAllButtons", @_);
-}
 
 =item $sel-E<gt>get_all_links()
 
@@ -2339,13 +2665,6 @@ If a given link has no ID, it will appear as "" in this array.
 
 =back
 
-=cut
-
-sub get_all_links {
-    my $self = shift;
-    return $self->get_string_array("getAllLinks", @_);
-}
-
 =item $sel-E<gt>get_all_fields()
 
 Returns the IDs of all input fields on the page.
@@ -2356,13 +2675,6 @@ If a given field has no ID, it will appear as "" in this array.
 =item Returns the IDs of all field on the page
 
 =back
-
-=cut
-
-sub get_all_fields {
-    my $self = shift;
-    return $self->get_string_array("getAllFields", @_);
-}
 
 =item $sel-E<gt>get_attribute_from_all_windows($attribute_name)
 
@@ -2380,13 +2692,6 @@ Returns an array of JavaScript property values from all known windows having one
 
 =back
 
-=cut
-
-sub get_attribute_from_all_windows {
-    my $self = shift;
-    return $self->get_string_array("getAttributeFromAllWindows", @_);
-}
-
 =item $sel-E<gt>dragdrop($locator, $movements_string)
 
 deprecated - use dragAndDrop instead
@@ -2398,13 +2703,6 @@ deprecated - use dragAndDrop instead
 =item $movements_string is offset in pixels from the current location to which the element should be moved, e.g., "+70,-300"
 
 =back
-
-=cut
-
-sub dragdrop {
-    my $self = shift;
-    $self->do_command("dragdrop", @_);
-}
 
 =item $sel-E<gt>set_mouse_speed($pixels)
 
@@ -2419,13 +2717,6 @@ If the mouse speed is greater than the distance between the two dragged objects,
 
 =back
 
-=cut
-
-sub set_mouse_speed {
-    my $self = shift;
-    $self->do_command("setMouseSpeed", @_);
-}
-
 =item $sel-E<gt>get_mouse_speed()
 
 Returns the number of pixels between "mousemove" events during dragAndDrop commands (default=10).
@@ -2435,13 +2726,6 @@ Returns the number of pixels between "mousemove" events during dragAndDrop comma
 =item Returns the number of pixels between "mousemove" events during dragAndDrop commands (default=10)
 
 =back
-
-=cut
-
-sub get_mouse_speed {
-    my $self = shift;
-    return $self->get_number("getMouseSpeed", @_);
-}
 
 =item $sel-E<gt>drag_and_drop($locator, $movements_string)
 
@@ -2455,13 +2739,6 @@ Drags an element a certain distance and then drops it
 
 =back
 
-=cut
-
-sub drag_and_drop {
-    my $self = shift;
-    $self->do_command("dragAndDrop", @_);
-}
-
 =item $sel-E<gt>drag_and_drop_to_object($locator_of_object_to_be_dragged, $locator_of_drag_destination_object)
 
 Drags an element and drops it on another element
@@ -2474,34 +2751,13 @@ Drags an element and drops it on another element
 
 =back
 
-=cut
-
-sub drag_and_drop_to_object {
-    my $self = shift;
-    $self->do_command("dragAndDropToObject", @_);
-}
-
 =item $sel-E<gt>window_focus()
 
 Gives focus to the currently selected window
 
-=cut
-
-sub window_focus {
-    my $self = shift;
-    $self->do_command("windowFocus", @_);
-}
-
 =item $sel-E<gt>window_maximize()
 
 Resize currently selected window to take up the entire screen
-
-=cut
-
-sub window_maximize {
-    my $self = shift;
-    $self->do_command("windowMaximize", @_);
-}
 
 =item $sel-E<gt>get_all_window_ids()
 
@@ -2513,13 +2769,6 @@ Returns the IDs of all windows that the browser knows about in an array.
 
 =back
 
-=cut
-
-sub get_all_window_ids {
-    my $self = shift;
-    return $self->get_string_array("getAllWindowIds", @_);
-}
-
 =item $sel-E<gt>get_all_window_names()
 
 Returns the names of all windows that the browser knows about in an array.
@@ -2529,13 +2778,6 @@ Returns the names of all windows that the browser knows about in an array.
 =item Returns Array of names of all windows that the browser knows about.
 
 =back
-
-=cut
-
-sub get_all_window_names {
-    my $self = shift;
-    return $self->get_string_array("getAllWindowNames", @_);
-}
 
 =item $sel-E<gt>get_all_window_titles()
 
@@ -2547,13 +2789,6 @@ Returns the titles of all windows that the browser knows about in an array.
 
 =back
 
-=cut
-
-sub get_all_window_titles {
-    my $self = shift;
-    return $self->get_string_array("getAllWindowTitles", @_);
-}
-
 =item $sel-E<gt>get_html_source()
 
 Returns the entire HTML source between the opening andclosing "html" tags.
@@ -2563,13 +2798,6 @@ Returns the entire HTML source between the opening andclosing "html" tags.
 =item Returns the entire HTML source
 
 =back
-
-=cut
-
-sub get_html_source {
-    my $self = shift;
-    return $self->get_string("getHtmlSource", @_);
-}
 
 =item $sel-E<gt>set_cursor_position($locator, $position)
 
@@ -2582,13 +2810,6 @@ Moves the text cursor to the specified position in the given input element or te
 =item $position is the numerical position of the cursor in the field; position should be 0 to move the position to the beginning of the field.  You can also set the cursor to -1 to move it to the end of the field.
 
 =back
-
-=cut
-
-sub set_cursor_position {
-    my $self = shift;
-    $self->do_command("setCursorPosition", @_);
-}
 
 =item $sel-E<gt>get_element_index($locator)
 
@@ -2605,13 +2826,6 @@ Get the relative index of an element to its parent (starting from 0). The commen
 =item Returns of relative index of the element to its parent (starting from 0)
 
 =back
-
-=cut
-
-sub get_element_index {
-    my $self = shift;
-    return $self->get_number("getElementIndex", @_);
-}
 
 =item $sel-E<gt>is_ordered($locator1, $locator2)
 
@@ -2631,13 +2845,6 @@ Check if these two elements have same parent and are ordered siblings in the DOM
 
 =back
 
-=cut
-
-sub is_ordered {
-    my $self = shift;
-    return $self->get_boolean("isOrdered", @_);
-}
-
 =item $sel-E<gt>get_element_position_left($locator)
 
 Retrieves the horizontal position of an element
@@ -2653,13 +2860,6 @@ Retrieves the horizontal position of an element
 =item Returns of pixels from the edge of the frame.
 
 =back
-
-=cut
-
-sub get_element_position_left {
-    my $self = shift;
-    return $self->get_number("getElementPositionLeft", @_);
-}
 
 =item $sel-E<gt>get_element_position_top($locator)
 
@@ -2677,13 +2877,6 @@ Retrieves the vertical position of an element
 
 =back
 
-=cut
-
-sub get_element_position_top {
-    my $self = shift;
-    return $self->get_number("getElementPositionTop", @_);
-}
-
 =item $sel-E<gt>get_element_width($locator)
 
 Retrieves the width of an element
@@ -2700,13 +2893,6 @@ Retrieves the width of an element
 
 =back
 
-=cut
-
-sub get_element_width {
-    my $self = shift;
-    return $self->get_number("getElementWidth", @_);
-}
-
 =item $sel-E<gt>get_element_height($locator)
 
 Retrieves the height of an element
@@ -2722,13 +2908,6 @@ Retrieves the height of an element
 =item Returns height of an element in pixels
 
 =back
-
-=cut
-
-sub get_element_height {
-    my $self = shift;
-    return $self->get_number("getElementHeight", @_);
-}
 
 =item $sel-E<gt>get_cursor_position($locator)
 
@@ -2748,13 +2927,6 @@ This method will fail if the specified element isn't an input element or textare
 
 =back
 
-=cut
-
-sub get_cursor_position {
-    my $self = shift;
-    return $self->get_number("getCursorPosition", @_);
-}
-
 =item $sel-E<gt>get_expression($expression)
 
 Returns the specified expression.
@@ -2772,13 +2944,6 @@ This is useful because of JavaScript preprocessing.It is used to generate comman
 
 =back
 
-=cut
-
-sub get_expression {
-    my $self = shift;
-    return $self->get_string("getExpression", @_);
-}
-
 =item $sel-E<gt>get_xpath_count($xpath)
 
 Returns the number of nodes that match the specified xpath, eg. "//table" would givethe number of tables.
@@ -2795,13 +2960,6 @@ Returns the number of nodes that match the specified xpath, eg. "//table" would 
 
 =back
 
-=cut
-
-sub get_xpath_count {
-    my $self = shift;
-    return $self->get_number("getXpathCount", @_);
-}
-
 =item $sel-E<gt>assign_id($locator, $identifier)
 
 Temporarily sets the "id" attribute of the specified element, so you can locate it in the futureusing its ID rather than a slow/complicated XPath.  This ID will disappear once the page isreloaded.
@@ -2814,13 +2972,6 @@ Temporarily sets the "id" attribute of the specified element, so you can locate 
 
 =back
 
-=cut
-
-sub assign_id {
-    my $self = shift;
-    $self->do_command("assignId", @_);
-}
-
 =item $sel-E<gt>allow_native_xpath($allow)
 
 Specifies whether Selenium should use the native in-browser implementationof XPath (if any native version is available); if you pass "false" tothis function, we will always use our pure-JavaScript xpath library.Using the pure-JS xpath library can improve the consistency of xpathelement locators between different browser vendors, but the pure-JSversion is much slower than the native implementations.
@@ -2831,34 +2982,20 @@ Specifies whether Selenium should use the native in-browser implementationof XPa
 
 =back
 
-=cut
-
-sub allow_native_xpath {
-    my $self = shift;
-    $self->do_command("allowNativeXpath", @_);
-}
-
 =item $sel-E<gt>ignore_attributes_without_value($ignore)
 
 Specifies whether Selenium will ignore xpath attributes that have novalue, i.e. are the empty string, when using the non-native xpathevaluation engine. You'd want to do this for performance reasons in IE.However, this could break certain xpaths, for example an xpath that looksfor an attribute whose value is NOT the empty string.The hope is that such xpaths are relatively rare, but the user shouldhave the option of using them. Note that this only influences xpathevaluation when using the ajaxslt engine (i.e. not "javascript-xpath").
 
 =over
 
-=item $ignore is boolean, true means we'll ignore attributes without value                        at the expense of xpath "correctness"; false means                        we'll sacrifice speed for correctness.
+=item $ignore is boolean, true means we'll ignore attributes without value at the expense of xpath "correctness"; false means we'll sacrifice speed for correctness.
 
 =back
-
-=cut
-
-sub ignore_attributes_without_value {
-    my $self = shift;
-    $self->do_command("ignoreAttributesWithoutValue", @_);
-}
 
 =item $sel-E<gt>wait_for_condition($script, $timeout)
 
 Runs the specified JavaScript snippet repeatedly until it evaluates to "true".The snippet may have multiple lines, but only the result of the last linewill be considered.
-Note that, by default, the snippet will be run in the runner's test window, not in the windowof your application.  To get the window of your application, you can usethe JavaScript snippet C<selenium.browserbot.getCurrentWindow()>, and thenrun your JavaScript in there
+Note that, by default, the snippet will be run in the runner's test window, not in the windowof your application. To get the window of your application, you can usethe JavaScript snippet C<selenium.browserbot.getCurrentWindow()>, and thenrun your JavaScript in there
 
 =over
 
@@ -2867,15 +3004,6 @@ Note that, by default, the snippet will be run in the runner's test window, not 
 =item $timeout is a timeout in milliseconds, after which this command will return with an error
 
 =back
-
-=cut
-
-sub wait_for_condition {
-    my $self = shift;
-    local $self->{_timeout} = $_[1];
-
-    $self->do_command("waitForCondition", @_);
-}
 
 =item $sel-E<gt>set_timeout($timeout)
 
@@ -2889,15 +3017,6 @@ The default timeout is 30 seconds.
 
 =back
 
-=cut
-
-sub set_timeout {
-    my $self = shift;
-    $self->{_timeout} = $_[0];
-
-    $self->do_command("setTimeout", @_);
-}
-
 =item $sel-E<gt>wait_for_page_to_load($timeout)
 
 Waits for a new page to load.
@@ -2910,15 +3029,6 @@ Selenium constantly keeps track of new pages loading, and sets a "newPageLoaded"
 =item $timeout is a timeout in milliseconds, after which this command will return with an error
 
 =back
-
-=cut
-
-sub wait_for_page_to_load {
-    my $self = shift;
-    local $self->{_timeout} = $_[1];
-
-    $self->do_command("waitForPageToLoad", @_);
-}
 
 =item $sel-E<gt>wait_for_frame_to_load($frame_address, $timeout)
 
@@ -2934,15 +3044,6 @@ See waitForPageToLoad for more information.
 
 =back
 
-=cut
-
-sub wait_for_frame_to_load {
-    my $self = shift;
-    local $self->{_timeout} = $_[1];
-
-    $self->do_command("waitForFrameToLoad", @_);
-}
-
 =item $sel-E<gt>get_cookie()
 
 Return all cookies of the current page under test.
@@ -2952,13 +3053,6 @@ Return all cookies of the current page under test.
 =item Returns all cookies of the current page under test
 
 =back
-
-=cut
-
-sub get_cookie {
-    my $self = shift;
-    return $self->get_string("getCookie", @_);
-}
 
 =item $sel-E<gt>get_cookie_by_name($name)
 
@@ -2976,13 +3070,6 @@ Returns the value of the cookie with the specified name, or throws an error if t
 
 =back
 
-=cut
-
-sub get_cookie_by_name {
-    my $self = shift;
-    return $self->get_string("getCookieByName", @_);
-}
-
 =item $sel-E<gt>is_cookie_present($name)
 
 Returns true if a cookie with the specified name is present, or false otherwise.
@@ -2999,13 +3086,6 @@ Returns true if a cookie with the specified name is present, or false otherwise.
 
 =back
 
-=cut
-
-sub is_cookie_present {
-    my $self = shift;
-    return $self->get_boolean("isCookiePresent", @_);
-}
-
 =item $sel-E<gt>create_cookie($name_value_pair, $options_string)
 
 Create a new cookie whose path and domain are same with those of current pageunder test, unless you specified a path for this cookie explicitly.
@@ -3017,13 +3097,6 @@ Create a new cookie whose path and domain are same with those of current pageund
 =item $options_string is options for the cookie. Currently supported options include 'path', 'max_age' and 'domain'.      the optionsString's format is "path=/path/, max_age=60, domain=.foo.com". The order of options are irrelevant, the unit      of the value of 'max_age' is second.  Note that specifying a domain that isn't a subset of the current domain will      usually fail.
 
 =back
-
-=cut
-
-sub create_cookie {
-    my $self = shift;
-    $self->do_command("createCookie", @_);
-}
 
 =item $sel-E<gt>delete_cookie($name, $options_string)
 
@@ -3037,23 +3110,9 @@ Delete a named cookie with specified path and domain.  Be careful; to delete a c
 
 =back
 
-=cut
-
-sub delete_cookie {
-    my $self = shift;
-    $self->do_command("deleteCookie", @_);
-}
-
 =item $sel-E<gt>delete_all_visible_cookies()
 
 Calls deleteCookie with recurse=true on all cookies visible to the current page.As noted on the documentation for deleteCookie, recurse=true can be much slowerthan simply deleting the cookies using a known domain/path.
-
-=cut
-
-sub delete_all_visible_cookies {
-    my $self = shift;
-    $self->do_command("deleteAllVisibleCookies", @_);
-}
 
 =item $sel-E<gt>set_browser_log_level($log_level)
 
@@ -3065,13 +3124,6 @@ Sets the threshold for browser-side logging messages; log messages beneath this 
 
 =back
 
-=cut
-
-sub set_browser_log_level {
-    my $self = shift;
-    $self->do_command("setBrowserLogLevel", @_);
-}
-
 =item $sel-E<gt>run_script($script)
 
 Creates a new "script" tag in the body of the current test window, and adds the specified text into the body of the command.  Scripts run inthis way can often be debugged more easily than scripts executed usingSelenium's "getEval" command.  Beware that JS exceptions thrown in these scripttags aren't managed by Selenium, so you should probably wrap your scriptin try/catch blocks if there is any chance that the script will throwan exception.
@@ -3081,13 +3133,6 @@ Creates a new "script" tag in the body of the current test window, and adds the 
 =item $script is the JavaScript snippet to run
 
 =back
-
-=cut
-
-sub run_script {
-    my $self = shift;
-    $self->do_command("runScript", @_);
-}
 
 =item $sel-E<gt>add_location_strategy($strategy_name)
 
@@ -3117,13 +3162,6 @@ The function must return null if the element can't be found.
 
 =back
 
-=cut
-
-sub add_location_strategy {
-    my $self = shift;
-    $self->do_command("addLocationStrategy", @_);
-}
-
 =item $sel-E<gt>capture_entire_page_screenshot($filename, $kwargs)
 
 Saves the entire contents of the current window canvas to a PNG file.Contrast this with the captureScreenshot command, which captures thecontents of the OS viewport (i.e. whatever is currently being displayedon the monitor), and is implemented in the RC only. Currently this onlyworks in Firefox when running in chrome mode, and in IE non-HTA usingthe EXPERIMENTAL "Snapsie" utility. The Firefox implementation is mostlyborrowed from the Screengrab! Firefox extension. Please seehttp://www.screengrab.org and http://snapsie.sourceforge.net/ fordetails.
@@ -3132,7 +3170,7 @@ Saves the entire contents of the current window canvas to a PNG file.Contrast th
 
 =item $filename is the path to the file to persist the screenshot as. No filename extension will be appended by default.  Directories will not be created if they do not exist, and an exception will be thrown, possibly by native code.
 
-=item $kwargs is a kwargs string that modifies the way the screenshot is captured. Example: "background=#CCFFDD". Currently valid options:                                     
+=item $kwargs is a kwargs string that modifies the way the screenshot is captured. Example: "background=#CCFFDD". Currently valid options:
 
 =over
 
@@ -3142,13 +3180,6 @@ Saves the entire contents of the current window canvas to a PNG file.Contrast th
 
 =back
 
-=cut
-
-sub capture_entire_page_screenshot {
-    my $self = shift;
-    $self->do_command("captureEntirePageScreenshot", @_);
-}
-
 =item $sel-E<gt>rollup($rollup_name, $kwargs)
 
 Executes a command rollup, which is a series of commands with a uniquename, and optionally arguments that control the generation of the set ofcommands. If any one of the rolled-up commands fails, the rollup isconsidered to have failed. Rollups may also contain nested rollups.
@@ -3157,35 +3188,21 @@ Executes a command rollup, which is a series of commands with a uniquename, and 
 
 =item $rollup_name is the name of the rollup command
 
-=item $kwargs is keyword arguments string that influences how the                    rollup expands into commands
+=item $kwargs is keyword arguments string that influences how the rollup expands into commands
 
 =back
 
-=cut
-
-sub rollup {
-    my $self = shift;
-    $self->do_command("rollup", @_);
-}
-
 =item $sel-E<gt>add_script($script_content, $script_tag_id)
 
-Loads script content into a new script tag in the Selenium document. Thisdiffers from the runScript command in that runScript adds the script tagto the document of the AUT, not the Selenium document. The followingentities in the script content are replaced by the characters theyrepresent:    &lt;    &gt;    &amp;The corresponding remove command is removeScript.
+Loads script content into a new script tag in the Selenium document. Thisdiffers from the runScript command in that runScript adds the script tagto the document of the AUT, not the Selenium document. The followingentities in the script content are replaced by the characters they represent: &lt; &gt; &amp;The corresponding remove command is removeScript.
 
 =over
 
 =item $script_content is the Javascript content of the script to add
 
-=item $script_tag_id is (optional) the id of the new script tag. If                       specified, and an element with this id already                       exists, this operation will fail.
+=item $script_tag_id is (optional) the id of the new script tag. If specified, and an element with this id already exists, this operation will fail.
 
 =back
-
-=cut
-
-sub add_script {
-    my $self = shift;
-    $self->do_command("addScript", @_);
-}
 
 =item $sel-E<gt>remove_script($script_tag_id)
 
@@ -3197,32 +3214,23 @@ Removes a script tag from the Selenium document identified by the givenid. Does 
 
 =back
 
-=cut
-
-sub remove_script {
-    my $self = shift;
-    $self->do_command("removeScript", @_);
-}
-
 =item $sel-E<gt>use_xpath_library($library_name)
 
 Allows choice of one of the available libraries.
 
 =over
 
-=item $library_name is name of the desired library Only the following three can be chosen: 
+=item $library_name is name of the desired library Only the following three can be chosen:
 
 =over
-   
+
 =item *
 
 "ajaxslt" - Google's library
 
-
 =item *
 
 "javascript-xpath" - Cybozu Labs' faster library
-
 
 =item *
 
@@ -3234,13 +3242,6 @@ Allows choice of one of the available libraries.
 
 =back
 
-=cut
-
-sub use_xpath_library {
-    my $self = shift;
-    $self->do_command("useXpathLibrary", @_);
-}
-
 =item $sel-E<gt>set_context($context)
 
 Writes a message to the status bar and adds a note to the browser-sidelog.
@@ -3251,13 +3252,6 @@ Writes a message to the status bar and adds a note to the browser-sidelog.
 
 =back
 
-=cut
-
-sub set_context {
-    my $self = shift;
-    $self->do_command("setContext", @_);
-}
-
 =item $sel-E<gt>attach_file($field_locator, $file_locator)
 
 Sets a file input (upload) field to the file listed in fileLocator
@@ -3266,16 +3260,9 @@ Sets a file input (upload) field to the file listed in fileLocator
 
 =item $field_locator is an element locator
 
-=item $file_locator is a URL pointing to the specified file. Before the file  can be set in the input field (fieldLocator), Selenium RC may need to transfer the file    to the local machine before attaching the file in a web page form. This is common in selenium  grid configurations where the RC server driving the browser is not the same  machine that started the test.   Supported Browsers: Firefox ("*chrome") only.
+=item $file_locator is a URL pointing to the specified file. Before the file  can be set in the input field (fieldLocator), Selenium RC may need to transfer the file to the local machine before attaching the file in a web page form. This is common in selenium  grid configurations where the RC server driving the browser is not the same  machine that started the test. Supported Browsers: Firefox ("*chrome") only.
 
 =back
-
-=cut
-
-sub attach_file {
-    my $self = shift;
-    $self->do_command("attachFile", @_);
-}
 
 =item $sel-E<gt>capture_screenshot($filename)
 
@@ -3287,13 +3274,6 @@ Captures a PNG screenshot to the specified file.
 
 =back
 
-=cut
-
-sub capture_screenshot {
-    my $self = shift;
-    $self->do_command("captureScreenshot", @_);
-}
-
 =item $sel-E<gt>capture_screenshot_to_string()
 
 Capture a PNG screenshot.  It then returns the file as a base 64 encoded string.
@@ -3303,13 +3283,6 @@ Capture a PNG screenshot.  It then returns the file as a base 64 encoded string.
 =item Returns The base 64 encoded string of the screen shot (PNG file)
 
 =back
-
-=cut
-
-sub capture_screenshot_to_string {
-    my $self = shift;
-    return $self->get_string("captureScreenshotToString", @_);
-}
 
 =item $sel-E<gt>capture_entire_page_screenshot_to_string($kwargs)
 
@@ -3327,23 +3300,9 @@ Downloads a screenshot of the browser current window canvas to a based 64 encode
 
 =back
 
-=cut
-
-sub capture_entire_page_screenshot_to_string {
-    my $self = shift;
-    return $self->get_string("captureEntirePageScreenshotToString", @_);
-}
-
 =item $sel-E<gt>shut_down_selenium_server()
 
 Kills the running Selenium Server and all browser sessions.  After you run this command, you will no longer be able to sendcommands to the server; you can't remotely start the server once it has been stopped.  Normallyyou should prefer to run the "stop" command, which terminates the current browser session, rather than shutting down the entire server.
-
-=cut
-
-sub shut_down_selenium_server {
-    my $self = shift;
-    $self->do_command("shutDownSeleniumServer", @_);
-}
 
 =item $sel-E<gt>retrieve_last_remote_control_logs()
 
@@ -3355,13 +3314,6 @@ Retrieve the last messages logged on a specific remote control. Useful for error
 
 =back
 
-=cut
-
-sub retrieve_last_remote_control_logs {
-    my $self = shift;
-    return $self->get_string("retrieveLastRemoteControlLogs", @_);
-}
-
 =item $sel-E<gt>key_down_native($keycode)
 
 Simulates a user pressing a key (without releasing it yet) by sending a native operating system keystroke.This function uses the java.awt.Robot class to send a keystroke; this more accurately simulates typinga key on the keyboard.  It does not honor settings from the shiftKeyDown, controlKeyDown, altKeyDown andmetaKeyDown commands, and does not target any particular HTML element.  To send a keystroke to a particularelement, focus on the element first before running this command.
@@ -3371,13 +3323,6 @@ Simulates a user pressing a key (without releasing it yet) by sending a native o
 =item $keycode is an integer keycode number corresponding to a java.awt.event.KeyEvent; note that Java keycodes are NOT the same thing as JavaScript keycodes!
 
 =back
-
-=cut
-
-sub key_down_native {
-    my $self = shift;
-    $self->do_command("keyDownNative", @_);
-}
 
 =item $sel-E<gt>key_up_native($keycode)
 
@@ -3389,13 +3334,6 @@ Simulates a user releasing a key by sending a native operating system keystroke.
 
 =back
 
-=cut
-
-sub key_up_native {
-    my $self = shift;
-    $self->do_command("keyUpNative", @_);
-}
-
 =item $sel-E<gt>key_press_native($keycode)
 
 Simulates a user pressing and releasing a key by sending a native operating system keystroke.This function uses the java.awt.Robot class to send a keystroke; this more accurately simulates typinga key on the keyboard.  It does not honor settings from the shiftKeyDown, controlKeyDown, altKeyDown andmetaKeyDown commands, and does not target any particular HTML element.  To send a keystroke to a particularelement, focus on the element first before running this command.
@@ -3406,35 +3344,13 @@ Simulates a user pressing and releasing a key by sending a native operating syst
 
 =back
 
-=cut
-
-sub key_press_native {
-    my $self = shift;
-    $self->do_command("keyPressNative", @_);
-}
-
 =item $sel-E<gt>wait_for_text_present($text, $timeout)
 
 Waits until $text is present in the html source
 
-=cut
-
-sub wait_for_text_present {
-    my $self = shift;
-    $self->do_command("waitForTextPresent", @_);
-}
-
 =item $sel-E<gt>wait_for_element_present($locator, $timeout)
 
 Waits until $locator is present
-
-=cut
-
-sub wait_for_element_present {
-    my $self = shift;
-    $self->do_command("waitForElementPresent", @_);
-}
-
 
 =item $sel-E<gt>is_location($expected_location)
 
@@ -3443,22 +3359,11 @@ If an URL querystring is provided, this is checked as well.
 
 =over
 
-=item $expected_location is the location to match.  
+=item $expected_location is the location to match.
 
 =back
 
 Note: This function is deprecated, use get_location() instead.
-
-=cut
-
-sub is_location {
-    my $self = shift;
-    warn "is_location() is deprecated, use get_location()\n"
-        unless $self->{no_deprecation_msg};
-    my $expected_location = shift;
-    my $loc = $self->get_string("getLocation");
-    return $loc =~ /\Q$expected_location\E$/;
-}
 
 =item $sel-E<gt>get_checked($locator)
 
@@ -3466,20 +3371,11 @@ Gets whether a toggle-button (checkbox/radio) is checked.  Fails if the specifie
 
 =over
 
-=item $locator is an element locator pointing to a checkbox or radio button.  
+=item $locator is an element locator pointing to a checkbox or radio button.
 
 =back
 
 Note: This function is deprecated, use is_checked() instead.
-
-=cut
-
-sub get_checked {
-    my $self = shift;
-    warn "get_checked() is deprecated, use is_checked()\n"
-        unless $self->{no_deprecation_msg};
-    return $self->get_string("isChecked", @_) ? 'true' : 'false';
-}
 
 =item $sel-E<gt>is_selected($locator, $option_locator)
 
@@ -3489,28 +3385,13 @@ See the select command for more information about option locators.
 
 =over
 
-=item $locator is an element locator.  
+=item $locator is an element locator.
 
-=item $option_locator is an option locator, typically just an option label (e.g. "John Smith").  
+=item $option_locator is an option locator, typically just an option label (e.g. "John Smith").
 
 =back
 
 Note: This function is deprecated, use the get_selected_*() methods instead.
-
-=cut
-
-sub is_selected {
-    my ($self, $locator, $option_locator) = @_;
-    warn "is_selected() is deprecated, use get_selected_*() methods\n"
-        unless $self->{no_deprecation_msg};
-    $option_locator =~ m/^(?:(.+)=)?(.+)/;
-    my $selector = $1 || 'label';
-    $selector = 'indexe' if $selector eq 'index';
-    my $pattern = $2;
-    my $func = "get_selected_${selector}s";
-    my @selected = $self->$func($locator);
-    return grep { $pattern eq $_ } @selected;
-}
 
 =item $sel-E<gt>get_selected_options($locator)
 
@@ -3518,20 +3399,11 @@ Gets all option labels for selected options in the specified select or multi-sel
 
 =over
 
-=item $locator is an element locator.  
+=item $locator is an element locator.
 
 =back
 
 Note: This function is deprecated, use get_selected_labels() instead.
-
-=cut
-
-sub get_selected_options {
-    my $self = shift;
-    warn "get_selected_options() is deprecated, use get_selected_labels()\n"
-        unless $self->{no_deprecation_msg};
-    return $self->get_string_array("getSelectedLabels", @_);
-}
 
 =item $sel-E<gt>get_absolute_location()
 
@@ -3539,59 +3411,49 @@ Gets the absolute URL of the current page.
 
 Note: This function is deprecated, use get_location() instead.
 
-=cut
-
-sub get_absolute_location {
-    my $self = shift;
-    warn "get_absolute_location() is deprecated, use get_location()\n"
-        unless $self->{no_deprecation_msg};
-    return $self->get_string("getLocation", @_);
-}
-
-=pod
-
 =back
 
-=cut
+=head1 NAME
 
-sub DESTROY {
-    my $self = shift;
-    $self->stop if $self->{auto_stop};
-}
-
-1;
-
-__END__
+WWW::Selenium - Perl Client for the Selenium Remote Control test tool
 
 =head1 SEE ALSO
 
 For more information about Selenium Remote Control, visit the website
 at L<http://www.openqa.org/selenium-rc/>.
 
+Selenium Remote Control maintained by Dan Fabulich <dfabulich@warpmail.net>
+
 =head1 BUGS
 
 The Selenium Remote Control JIRA issue tracking system is available
 online at L<http://jira.openqa.org/browse/SRC>.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Perl driver maintained by Luke Closs <selenium-rc@awesnob.com>
+=over 4
 
-Selenium Remote Control maintained by Dan Fabulich <dfabulich@warpmail.net>
+=item *
 
-=head1 LICENSE
+Maintained by: Matt Phillips <mattp@cpan.org>, Luke Closs <lukec@cpan.org>
 
-Copyright (c) 2006 ThoughtWorks, Inc
+=item *
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+Originally by Mattia Barbon <mbarbon@cpan.org>
 
-     http://www.apache.org/licenses/LICENSE-2.0
+=back
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+=head1 COPYRIGHT AND LICENSE
+
+This software is Copyright (c) 2006 by ThoughtWorks, Inc.
+
+This is free software, licensed under:
+
+  The Apache License, Version 2.0, January 2004
+
+=cut
+
+
+__END__
+
 

@@ -1,26 +1,68 @@
-#!/usr/bin/perl -w
-use warnings;
+
 use strict;
-use inc::Module::Install 0.95;
+use warnings;
 
-# Need to explicitly pre-load this so it doesn't conflict with a mocked one
-# created by loading Test::Mock::LWP
-eval "require LWP::UserAgent";
+BEGIN { require 5.008; }
 
-name            'Test-WWW-Selenium';
-license         'other';
-all_from        'lib/Test/WWW/Selenium.pm';
-author          'Luke Closs <test-www-selenium@awesnob.com>';
-requires       'LWP::UserAgent'  => 0;
-requires       'URI::Escape'     => '3.30';
-build_requires 'Test::More'      => '0.42';
-build_requires 'Test::Exception' => 0;
-build_requires 'Test::Mock::LWP' => 0;
-build_requires 'Test::Pod'       => 0;
+use ExtUtils::MakeMaker 6.31;
 
-# Auto-install all dependencies from CPAN
-auto_install;
 
-# Generate the Makefile
-repository 'http://github.com/lukec/cpan-selenium-rc-perl';
-WriteAll;
+
+my %WriteMakefileArgs = (
+  'ABSTRACT' => 'Perl Client for the Selenium Remote Control test tool',
+  'AUTHOR' => 'Maintained by: Matt Phillips <mattp@cpan.org>, Luke Closs <lukec@cpan.org>, Originally by Mattia Barbon <mbarbon@cpan.org>',
+  'BUILD_REQUIRES' => {
+    'File::Find' => '0',
+    'File::Spec' => '0',
+    'File::Temp' => '0',
+    'FindBin' => '0',
+    'Test::Builder::Tester' => '0',
+    'Test::Exception' => '0',
+    'Test::Mock::LWP' => '0'
+  },
+  'CONFIGURE_REQUIRES' => {
+    'ExtUtils::MakeMaker' => '6.31'
+  },
+  'DISTNAME' => 'Test-WWW-Selenium',
+  'EXE_FILES' => [],
+  'LICENSE' => 'perl',
+  'NAME' => 'Test::WWW::Selenium',
+  'PREREQ_PM' => {
+    'Carp' => '0',
+    'Exporter' => '0',
+    'HTTP::Headers' => '0',
+    'HTTP::Request' => '0',
+    'IO::Socket' => '0',
+    'LWP::UserAgent' => '0',
+    'Test::Builder' => '0',
+    'Test::More' => '0',
+    'Time::HiRes' => '0',
+    'URI::Escape' => '0'
+  },
+  'VERSION' => '1.25',
+  'test' => {
+    'TESTS' => 't/*.t'
+  }
+);
+
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
+  my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};
+  my $pp = $WriteMakefileArgs{PREREQ_PM};
+  for my $mod ( keys %$br ) {
+    if ( exists $pp->{$mod} ) {
+      $pp->{$mod} = $br->{$mod} if $br->{$mod} > $pp->{$mod};
+    }
+    else {
+      $pp->{$mod} = $br->{$mod};
+    }
+  }
+}
+
+delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
+  unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
+
+WriteMakefile(%WriteMakefileArgs);
+
+
+
