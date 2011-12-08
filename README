@@ -2,7 +2,7 @@ NAME
     Test::WWW::Selenium - Test applications using Selenium Remote Control
 
 VERSION
-    version 1.25
+    version 1.30
 
 SYNOPSIS
     Test::WWW::Selenium is a subclass of WWW::Selenium that provides
@@ -64,6 +64,14 @@ ADDITIONAL METHODS
         perform various tasks to obtain additional details that occured when
         obtianing the error. If this is set to undef then the callback will
         not be issued.
+
+    $sel->debug()
+        Starts an interactive shell to pass commands to Selenium.
+
+        Commands are run against the selenium object, so you just need to
+        type:
+
+    eg: click("link=edit")
 
 AUTHORS
     *   Maintained by: Matt Phillips <mattp@cpan.org>, Luke Closs

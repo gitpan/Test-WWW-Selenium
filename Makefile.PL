@@ -2,46 +2,50 @@
 use strict;
 use warnings;
 
-BEGIN { require 5.008; }
+use 5.008;
 
-use ExtUtils::MakeMaker 6.31;
+use ExtUtils::MakeMaker 6.30;
 
 
 
 my %WriteMakefileArgs = (
-  'ABSTRACT' => 'Perl Client for the Selenium Remote Control test tool',
-  'AUTHOR' => 'Maintained by: Matt Phillips <mattp@cpan.org>, Luke Closs <lukec@cpan.org>, Originally by Mattia Barbon <mbarbon@cpan.org>',
-  'BUILD_REQUIRES' => {
-    'File::Find' => '0',
-    'File::Spec' => '0',
-    'File::Temp' => '0',
-    'FindBin' => '0',
-    'Test::Builder::Tester' => '0',
-    'Test::Exception' => '0',
-    'Test::Mock::LWP' => '0'
+  "ABSTRACT" => "Perl Client for the Selenium Remote Control test tool",
+  "AUTHOR" => "Maintained by: Matt Phillips <mattp\@cpan.org>, Luke Closs <lukec\@cpan.org>, Originally by Mattia Barbon <mbarbon\@cpan.org>",
+  "BUILD_REQUIRES" => {
+    "File::Find" => 0,
+    "File::Spec" => 0,
+    "File::Temp" => 0,
+    "FindBin" => 0,
+    "Test::Builder::Tester" => 0,
+    "Test::Exception" => 0,
+    "Test::Mock::LWP" => 0
   },
-  'CONFIGURE_REQUIRES' => {
-    'ExtUtils::MakeMaker' => '6.31'
+  "CONFIGURE_REQUIRES" => {
+    "ExtUtils::MakeMaker" => "6.30"
   },
-  'DISTNAME' => 'Test-WWW-Selenium',
-  'EXE_FILES' => [],
-  'LICENSE' => 'perl',
-  'NAME' => 'Test::WWW::Selenium',
-  'PREREQ_PM' => {
-    'Carp' => '0',
-    'Exporter' => '0',
-    'HTTP::Headers' => '0',
-    'HTTP::Request' => '0',
-    'IO::Socket' => '0',
-    'LWP::UserAgent' => '0',
-    'Test::Builder' => '0',
-    'Test::More' => '0',
-    'Time::HiRes' => '0',
-    'URI::Escape' => '0'
+  "DISTNAME" => "Test-WWW-Selenium",
+  "EXE_FILES" => [],
+  "LICENSE" => "perl",
+  "NAME" => "Test::WWW::Selenium",
+  "PREREQ_PM" => {
+    "Carp" => 0,
+    "Devel::REPL" => 0,
+    "Exporter" => 0,
+    "HTTP::Headers" => 0,
+    "HTTP::Request" => 0,
+    "IO::Socket" => 0,
+    "LWP::UserAgent" => 0,
+    "Test::Builder" => 0,
+    "Test::More" => 0,
+    "Time::HiRes" => 0,
+    "URI::Escape" => 0,
+    "base" => 0,
+    "strict" => 0,
+    "warnings" => 0
   },
-  'VERSION' => '1.25',
-  'test' => {
-    'TESTS' => 't/*.t'
+  "VERSION" => "1.30",
+  "test" => {
+    "TESTS" => "t/*.t"
   }
 );
 

@@ -5,7 +5,7 @@
       "Originally by Mattia Barbon <mbarbon@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.200005, CPAN::Meta::Converter version 2.110580",
+   "generated_by" : "Dist::Zilla version 4.300003, CPAN::Meta::Converter version 2.110930",
    "license" : [
       "perl_5"
    ],
@@ -24,12 +24,13 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : "6.31"
+            "ExtUtils::MakeMaker" : "6.30"
          }
       },
       "runtime" : {
          "requires" : {
             "Carp" : 0,
+            "Devel::REPL" : 0,
             "Exporter" : 0,
             "HTTP::Headers" : 0,
             "HTTP::Request" : 0,
@@ -39,7 +40,10 @@
             "Test::More" : 0,
             "Time::HiRes" : 0,
             "URI::Escape" : 0,
-            "perl" : "5.008"
+            "base" : 0,
+            "perl" : "5.008",
+            "strict" : 0,
+            "warnings" : 0
          }
       },
       "test" : {
@@ -57,15 +61,15 @@
    "provides" : {
       "Test::WWW::Selenium" : {
          "file" : "lib/Test/WWW/Selenium.pm",
-         "version" : "1.25"
+         "version" : "1.30"
       },
       "WWW::Selenium" : {
          "file" : "lib/WWW/Selenium.pm",
-         "version" : "1.25"
+         "version" : "1.30"
       },
       "WWW::Selenium::Util" : {
          "file" : "lib/WWW/Selenium/Util.pm",
-         "version" : "1.25"
+         "version" : "1.30"
       }
    },
    "release_status" : "stable",
@@ -74,13 +78,13 @@
          "mailto" : "bug-test-www-selenium at rt.cpan.org",
          "web" : "http://rt.cpan.org/Public/Dist/Display.html?Name=Test-WWW-Selenium"
       },
-      "homepage" : "http://github.com/lukec/cpan-selenium-rc-perl/tree",
+      "homepage" : "https://github.com/lukec/cpan-selenium-rc-perl",
       "repository" : {
          "type" : "git",
-         "url" : "git://github.com/lukec/cpan-selenium-rc-perl.git",
-         "web" : "http://github.com/lukec/cpan-selenium-rc-perl/tree"
+         "url" : "https://github.com/lukec/cpan-selenium-rc-perl.git",
+         "web" : "https://github.com/lukec/cpan-selenium-rc-perl"
       }
    },
-   "version" : "1.25"
+   "version" : "1.30"
 }
 
