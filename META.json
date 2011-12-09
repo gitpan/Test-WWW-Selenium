@@ -61,15 +61,15 @@
    "provides" : {
       "Test::WWW::Selenium" : {
          "file" : "lib/Test/WWW/Selenium.pm",
-         "version" : "1.30"
+         "version" : "1.31"
       },
       "WWW::Selenium" : {
          "file" : "lib/WWW/Selenium.pm",
-         "version" : "1.30"
+         "version" : "1.31"
       },
       "WWW::Selenium::Util" : {
          "file" : "lib/WWW/Selenium/Util.pm",
-         "version" : "1.30"
+         "version" : "1.31"
       }
    },
    "release_status" : "stable",
@@ -85,6 +85,6 @@
          "web" : "https://github.com/lukec/cpan-selenium-rc-perl"
       }
    },
-   "version" : "1.30"
+   "version" : "1.31"
 }
 

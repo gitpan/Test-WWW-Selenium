@@ -1,6 +1,6 @@
 package Test::WWW::Selenium;
 {
-  $Test::WWW::Selenium::VERSION = '1.30';
+  $Test::WWW::Selenium::VERSION = '1.31';
 }
 # ABSTRACT: Test applications using Selenium Remote Control
 use strict;
@@ -170,7 +170,7 @@ Test::WWW::Selenium - Test applications using Selenium Remote Control
 
 =head1 VERSION
 
-version 1.30
+version 1.31
 
 =head1 SYNOPSIS
 

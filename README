@@ -2,7 +2,7 @@ NAME
     Test::WWW::Selenium - Test applications using Selenium Remote Control
 
 VERSION
-    version 1.30
+    version 1.31
 
 SYNOPSIS
     Test::WWW::Selenium is a subclass of WWW::Selenium that provides

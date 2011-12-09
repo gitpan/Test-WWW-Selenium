@@ -12,6 +12,7 @@ lib/WWW/Selenium.pm
 lib/WWW/Selenium/Util.pm
 mypod2html.pl
 pom.xml
+release.txt
 t/00-compile.t
 t/01_load.t
 t/WWW/Selenium.pm
@@ -32,7 +33,6 @@ target/iedoc.xml
 todo.txt
 util/WWW/Selenium/XMLParseUtils.pm
 util/XMLParseUtils.t
-util/create_www_selenium.pl
 util/fetch_iedoc_xml.pl
 util/test_function.pl
 weaver.ini

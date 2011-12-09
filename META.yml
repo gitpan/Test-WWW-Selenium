@@ -28,13 +28,13 @@ no_index:
 provides:
   Test::WWW::Selenium:
     file: lib/Test/WWW/Selenium.pm
-    version: 1.30
+    version: 1.31
   WWW::Selenium:
     file: lib/WWW/Selenium.pm
-    version: 1.30
+    version: 1.31
   WWW::Selenium::Util:
     file: lib/WWW/Selenium/Util.pm
-    version: 1.30
+    version: 1.31
 requires:
   Carp: 0
   Devel::REPL: 0
@@ -55,4 +55,4 @@ resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=Test-WWW-Selenium
   homepage: https://github.com/lukec/cpan-selenium-rc-perl
   repository: https://github.com/lukec/cpan-selenium-rc-perl.git
-version: 1.30
+version: 1.31
