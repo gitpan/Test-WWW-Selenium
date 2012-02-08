@@ -1,12 +1,11 @@
 package Test::WWW::Selenium;
 {
-  $Test::WWW::Selenium::VERSION = '1.31';
+  $Test::WWW::Selenium::VERSION = '1.32';
 }
 # ABSTRACT: Test applications using Selenium Remote Control
 use strict;
 use base qw(WWW::Selenium);
 use Carp qw(croak);
-use Devel::REPL;
 
 
 use Test::More;
@@ -151,6 +150,7 @@ sub error_callback {
 
 sub debug {
     my $self = shift;
+    require Devel::REPL;
     my $repl = Devel::REPL->new(prompt => 'Selenium$ ');
     $repl->load_plugin($_) for qw/History LexEnv Colors Selenium Interrupt/;
     $repl->selenium($self);
@@ -170,7 +170,7 @@ Test::WWW::Selenium - Test applications using Selenium Remote Control
 
 =head1 VERSION
 
-version 1.31
+version 1.32
 
 =head1 SYNOPSIS
 

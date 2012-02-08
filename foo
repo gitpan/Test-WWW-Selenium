@@ -1,0 +1,11 @@
+[%User]
+name  = Luke Closs
+email = lukec@cpan.org
+
+[%Rights]
+license_class    = Perl_5
+copyright_holder = Luke Closs
+
+[%PAUSE]
+username = LUKEC
+password = cpan4me++

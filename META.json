@@ -5,7 +5,7 @@
       "Originally by Mattia Barbon <mbarbon@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300003, CPAN::Meta::Converter version 2.110930",
+   "generated_by" : "Dist::Zilla version 4.300005, CPAN::Meta::Converter version 2.112621",
    "license" : [
       "perl_5"
    ],
@@ -30,7 +30,7 @@
       "runtime" : {
          "requires" : {
             "Carp" : 0,
-            "Devel::REPL" : 0,
+            "Data::Dumper" : 0,
             "Exporter" : 0,
             "HTTP::Headers" : 0,
             "HTTP::Request" : 0,
@@ -41,6 +41,7 @@
             "Time::HiRes" : 0,
             "URI::Escape" : 0,
             "base" : 0,
+            "namespace::clean" : 0,
             "perl" : "5.008",
             "strict" : 0,
             "warnings" : 0
@@ -59,17 +60,21 @@
       }
    },
    "provides" : {
+      "Devel::REPL::Plugin::Selenium" : {
+         "file" : "lib/Devel/REPL/Plugin/Selenium.pm",
+         "version" : "1.32"
+      },
       "Test::WWW::Selenium" : {
          "file" : "lib/Test/WWW/Selenium.pm",
-         "version" : "1.31"
+         "version" : "1.32"
       },
       "WWW::Selenium" : {
          "file" : "lib/WWW/Selenium.pm",
-         "version" : "1.31"
+         "version" : "1.32"
       },
       "WWW::Selenium::Util" : {
          "file" : "lib/WWW/Selenium/Util.pm",
-         "version" : "1.31"
+         "version" : "1.32"
       }
    },
    "release_status" : "stable",
@@ -85,6 +90,6 @@
          "web" : "https://github.com/lukec/cpan-selenium-rc-perl"
       }
    },
-   "version" : "1.31"
+   "version" : "1.32"
 }
 
