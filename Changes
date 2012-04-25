@@ -1,5 +1,9 @@
 Revision history for Perl extension Test::WWW::Selenium.
 
+1.33 - Tue Apr 24 17:55:17 PDT 2012
+ - Remove debug() shell - it was too troublesome
+   I may re-implement this later as a separate package
+
 1.32 - Tue Feb  7 19:55:00 PST 2012
  - Make Devel::REPL a runtime requirement - thx haarg++
 

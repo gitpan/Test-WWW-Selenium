@@ -1,6 +1,6 @@
 package Test::WWW::Selenium;
 {
-  $Test::WWW::Selenium::VERSION = '1.32';
+  $Test::WWW::Selenium::VERSION = '1.33';
 }
 # ABSTRACT: Test applications using Selenium Remote Control
 use strict;
@@ -60,7 +60,7 @@ sub AUTOLOAD {
                 no strict 'refs';
                 my $rc = $Test->$comparator( $self->$getter, $str, $name );
                 if (!$rc && $self->error_callback) {
-                    &{$self->error_callback}($name);
+                    &{$self->error_callback}( $name, $self );
                 }
                 return $rc;
             };
@@ -75,7 +75,7 @@ sub AUTOLOAD {
                 no strict 'refs';
                 my $rc = $Test->$comparator( $self->$getter($locator), $str, $name );
                 if (!$rc && $self->error_callback) {
-                    &{$self->error_callback}($name);
+                    &{$self->error_callback}( $name, $self );
                 }
 		return $rc;
             };
@@ -102,7 +102,7 @@ sub AUTOLOAD {
             diag($@) if $@;
             $rc = ok( $rc, $name );
             if (!$rc && $self->error_callback) {
-                &{$self->error_callback}($name);
+                &{$self->error_callback}( $name, $self );
             }
             return $rc;
         };
@@ -147,17 +147,6 @@ sub error_callback {
     return $self->{error_callback};
 }
 
-
-sub debug {
-    my $self = shift;
-    require Devel::REPL;
-    my $repl = Devel::REPL->new(prompt => 'Selenium$ ');
-    $repl->load_plugin($_) for qw/History LexEnv Colors Selenium Interrupt/;
-    $repl->selenium($self);
-    $repl->lexical_environment->do($repl->selenium_lex_env);
-    $repl->run;
-}
-
 1;
 
 
@@ -170,7 +159,7 @@ Test::WWW::Selenium - Test applications using Selenium Remote Control
 
 =head1 VERSION
 
-version 1.32
+version 1.33
 
 =head1 SYNOPSIS
 
@@ -240,18 +229,6 @@ For example if you call text_like(...) and it fails the sub defined in the
 error_callback will be called. This allows you to perform various tasks to
 obtain additional details that occured when obtianing the error. If this is
 set to undef then the callback will not be issued.
-
-=back
-
-=over 4
-
-=item $sel-E<gt>debug()
-
-Starts an interactive shell to pass commands to Selenium.
-
-Commands are run against the selenium object, so you just need to type:
-
-=item eg: click("link=edit")
 
 =back
 
