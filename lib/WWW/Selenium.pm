@@ -15,7 +15,7 @@
 
 package WWW::Selenium;
 {
-  $WWW::Selenium::VERSION = '1.33';
+  $WWW::Selenium::VERSION = '1.34';
 }
 # ABSTRACT: Perl Client for the Selenium Remote Control test tool
 
@@ -1175,7 +1175,7 @@ WWW::Selenium - Perl Client for the Selenium Remote Control test tool
 
 =head1 VERSION
 
-version 1.33
+version 1.34
 
 =head1 SYNOPSIS
 

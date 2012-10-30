@@ -29,6 +29,7 @@ my %WriteMakefileArgs = (
   "NAME" => "Test::WWW::Selenium",
   "PREREQ_PM" => {
     "Carp" => 0,
+    "Data::Dumper" => 0,
     "Exporter" => 0,
     "HTTP::Headers" => 0,
     "HTTP::Request" => 0,
@@ -39,10 +40,11 @@ my %WriteMakefileArgs = (
     "Time::HiRes" => 0,
     "URI::Escape" => 0,
     "base" => 0,
+    "namespace::clean" => 0,
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "1.33",
+  "VERSION" => "1.34",
   "test" => {
     "TESTS" => "t/*.t"
   }

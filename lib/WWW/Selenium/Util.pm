@@ -1,6 +1,6 @@
 package WWW::Selenium::Util;
 {
-  $WWW::Selenium::Util::VERSION = '1.33';
+  $WWW::Selenium::Util::VERSION = '1.34';
 }
 # ABSTRACT: Utility code to help test using Selenium
 
@@ -35,7 +35,7 @@ WWW::Selenium::Util - Utility code to help test using Selenium
 
 =head1 VERSION
 
-version 1.33
+version 1.34
 
 =head1 SYNOPSIS
 
