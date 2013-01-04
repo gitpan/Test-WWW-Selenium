@@ -1,6 +1,6 @@
 package Devel::REPL::Plugin::Selenium;
 {
-  $Devel::REPL::Plugin::Selenium::VERSION = '1.34';
+  $Devel::REPL::Plugin::Selenium::VERSION = '1.35';
 }
  
 use Devel::REPL::Plugin;
@@ -45,7 +45,7 @@ Devel::REPL::Plugin::Selenium
 
 =head1 VERSION
 
-version 1.34
+version 1.35
 
 =cut
 

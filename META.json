@@ -70,19 +70,19 @@
    "provides" : {
       "Devel::REPL::Plugin::Selenium" : {
          "file" : "lib/Devel/REPL/Plugin/Selenium.pm",
-         "version" : "1.34"
+         "version" : "1.35"
       },
       "Test::WWW::Selenium" : {
          "file" : "lib/Test/WWW/Selenium.pm",
-         "version" : "1.34"
+         "version" : "1.35"
       },
       "WWW::Selenium" : {
          "file" : "lib/WWW/Selenium.pm",
-         "version" : "1.34"
+         "version" : "1.35"
       },
       "WWW::Selenium::Util" : {
          "file" : "lib/WWW/Selenium/Util.pm",
-         "version" : "1.34"
+         "version" : "1.35"
       }
    },
    "release_status" : "stable",
@@ -98,6 +98,6 @@
          "web" : "https://github.com/lukec/cpan-selenium-rc-perl"
       }
    },
-   "version" : "1.34"
+   "version" : "1.35"
 }
 
