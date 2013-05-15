@@ -11,15 +11,7 @@ use ExtUtils::MakeMaker 6.30;
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Perl Client for the Selenium Remote Control test tool",
   "AUTHOR" => "Maintained by: Matt Phillips <mattp\@cpan.org>, Luke Closs <lukec\@cpan.org>, Originally by Mattia Barbon <mbarbon\@cpan.org>",
-  "BUILD_REQUIRES" => {
-    "File::Find" => 0,
-    "File::Spec" => 0,
-    "File::Temp" => 0,
-    "FindBin" => 0,
-    "Test::Builder::Tester" => 0,
-    "Test::Exception" => 0,
-    "Test::Mock::LWP" => 0
-  },
+  "BUILD_REQUIRES" => {},
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
   },
@@ -44,12 +36,34 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "1.35",
+  "TEST_REQUIRES" => {
+    "File::Find" => 0,
+    "File::Spec" => 0,
+    "File::Temp" => 0,
+    "FindBin" => 0,
+    "Test::Builder::Tester" => 0,
+    "Test::Exception" => 0,
+    "Test::Mock::LWP" => 0
+  },
+  "VERSION" => "1.36",
   "test" => {
     "TESTS" => "t/*.t"
   }
 );
 
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
+  my $tr = delete $WriteMakefileArgs{TEST_REQUIRES};
+  my $br = $WriteMakefileArgs{BUILD_REQUIRES};
+  for my $mod ( keys %$tr ) {
+    if ( exists $br->{$mod} ) {
+      $br->{$mod} = $tr->{$mod} if $tr->{$mod} > $br->{$mod};
+    }
+    else {
+      $br->{$mod} = $tr->{$mod};
+    }
+  }
+}
 
 unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
   my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};

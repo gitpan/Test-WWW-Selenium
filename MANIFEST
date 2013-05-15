@@ -39,6 +39,5 @@ util/test_function.pl
 weaver.ini
 xt/release/distmeta.t
 xt/release/has-version.t
-xt/release/pod-coverage.t
 xt/release/pod-syntax.t
 xt/release/portability.t

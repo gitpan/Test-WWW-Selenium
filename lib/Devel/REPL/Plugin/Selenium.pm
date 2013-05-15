@@ -1,6 +1,6 @@
 package Devel::REPL::Plugin::Selenium;
 {
-  $Devel::REPL::Plugin::Selenium::VERSION = '1.35';
+  $Devel::REPL::Plugin::Selenium::VERSION = '1.36';
 }
  
 use Devel::REPL::Plugin;
@@ -37,6 +37,7 @@ around 'read' => sub {
 1;
 
 __END__
+
 =pod
 
 =head1 NAME
@@ -45,7 +46,6 @@ Devel::REPL::Plugin::Selenium
 
 =head1 VERSION
 
-version 1.35
+version 1.36
 
 =cut
-

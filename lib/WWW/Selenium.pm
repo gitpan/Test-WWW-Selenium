@@ -15,7 +15,7 @@
 
 package WWW::Selenium;
 {
-  $WWW::Selenium::VERSION = '1.35';
+  $WWW::Selenium::VERSION = '1.36';
 }
 # ABSTRACT: Perl Client for the Selenium Remote Control test tool
 
@@ -1165,7 +1165,7 @@ sub DESTROY {
 
 1;
 
-
+__END__
 
 =pod
 
@@ -1175,7 +1175,7 @@ WWW::Selenium - Perl Client for the Selenium Remote Control test tool
 
 =head1 VERSION
 
-version 1.35
+version 1.36
 
 =head1 SYNOPSIS
 
@@ -3452,8 +3452,3 @@ This is free software, licensed under:
   The Apache License, Version 2.0, January 2004
 
 =cut
-
-
-__END__
-
-

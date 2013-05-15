@@ -1,6 +1,6 @@
 package Test::WWW::Selenium;
 {
-  $Test::WWW::Selenium::VERSION = '1.35';
+  $Test::WWW::Selenium::VERSION = '1.36';
 }
 # ABSTRACT: Test applications using Selenium Remote Control
 use strict;
@@ -160,7 +160,7 @@ sub debug {
 
 1;
 
-
+__END__
 
 =pod
 
@@ -170,7 +170,7 @@ Test::WWW::Selenium - Test applications using Selenium Remote Control
 
 =head1 VERSION
 
-version 1.35
+version 1.36
 
 =head1 SYNOPSIS
 
@@ -287,7 +287,3 @@ This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
-
-
-__END__
-

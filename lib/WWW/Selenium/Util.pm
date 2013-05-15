@@ -1,6 +1,6 @@
 package WWW::Selenium::Util;
 {
-  $WWW::Selenium::Util::VERSION = '1.35';
+  $WWW::Selenium::Util::VERSION = '1.36';
 }
 # ABSTRACT: Utility code to help test using Selenium
 
@@ -25,7 +25,7 @@ sub server_is_running {
 
 1;
 
-
+__END__
 
 =pod
 
@@ -35,7 +35,7 @@ WWW::Selenium::Util - Utility code to help test using Selenium
 
 =head1 VERSION
 
-version 1.35
+version 1.36
 
 =head1 SYNOPSIS
 
@@ -81,7 +81,3 @@ This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
-
-
-__END__
-
